@@ -1,0 +1,18 @@
+接收到创建虚拟机的HTTP请求之后，创建nova.api.openstack.compute.ServersController实例，调用其create方法。
+
+在上述方法里面准备了一些创建需要的参数，然后调用的是nova.compute下的api.py中的create方法。
+
+上述方法中return的是nova.compute下的api.py中的_create_instance方法。
+
+在_create_instance方法中，self.compute_task_api.build_instances(...);compute_task_api是这个类下的一个方法，其返回值是conductor.ComputeTaskAPI()。也就是说在_create_instance方法中调用了conductor中的computetaskapi的build_instance方法。
+			self.compute_task_api.build_instances(context,
+			                instances=instances, image=boot_meta,
+			                filter_properties=filter_properties,
+			                admin_password=admin_password,
+			                injected_files=injected_files,
+			                requested_networks=requested_networks,
+			                security_groups=security_groups,
+			                block_device_mapping=block_device_mapping,
+			                legacy_bdm=False)
+			return (instances, reservation_id)
+

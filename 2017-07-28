@@ -1,0 +1,82 @@
+nova boot --flavor sqian_flavor1 --image 7497414f-671d-4c6c-835b-207ec57eaa5d --nic net-id=07c8d9fe-f5d1-400c-b440-134161b4ddce sqian_bm
+
+1:来之后先在70环境上试后台部署物理主机是否会成功。
+
+出现的问题是获取不到tftp服务器上的kernel文件和ramdisk文件。  cannot find kernel image /var/lib/tftpboot/0xxxx/deploy_kernel
+
+日志信息如下：
+2017-07-28 10:59:14.979 1233991 INFO nova.compute.resource_tracker [req-2b1428a5-7e4e-402f-a1c9-72df67786f2e - - - - -] Compute_service record updated for ironic.compute.domain.tld:0a9c20b5-5bca-4065-87cd-83573b1e1234
+2017-07-28 11:00:16.847 1233991 INFO nova.compute.resource_tracker [req-2b1428a5-7e4e-402f-a1c9-72df67786f2e - - - - -] Auditing locally available compute resources for node 0a9c20b5-5bca-4065-87cd-83573b1e1234
+2017-07-28 11:00:17.093 1233991 INFO nova.compute.resource_tracker [req-2b1428a5-7e4e-402f-a1c9-72df67786f2e - - - - -] Final resource view: name=0a9c20b5-5bca-4065-87cd-83573b1e1234 phys_ram=0MB used_ram=512MB phys_disk=0GB used_disk=20GB total_vcpus=0 used_vcpus=0 pci_stats=[]
+2017-07-28 11:00:17.130 1233991 INFO nova.compute.resource_tracker [req-2b1428a5-7e4e-402f-a1c9-72df67786f2e - - - - -] Compute_service record updated for ironic.compute.domain.tld:0a9c20b5-5bca-4065-87cd-83573b1e1234
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall [-] Fixed interval looping call 'nova.virt.ironic.driver.IronicDriver._wait_for_active' failed
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall Traceback (most recent call last):
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall   File "/usr/lib/python2.7/site-packages/oslo_service/loopingcall.py", line 136, in _run_loop
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall     result = func(*self.args, **self.kw)
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall   File "/usr/lib/python2.7/site-packages/nova/virt/ironic/driver.py", line 428, in _wait_for_active
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall InstanceDeployFailure: Failed to provision instance 945d15a1-eac3-4686-a7dc-87a98534ebce: Timeout reached while waiting for callback for node 0a9c20b5-5bca-4065-87cd-83573b1e1234
+2017-07-28 11:00:39.003 1233991 ERROR oslo.service.loopingcall
+2017-07-28 11:00:39.005 1233991 ERROR nova.virt.ironic.driver [req-64dea08d-9521-41a6-9aad-4ec2d2581d90 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Error deploying instance 945d15a1-eac3-4686-a7dc-87a98534ebce on baremetal node 0a9c20b5-5bca-4065-87cd-83573b1e1234.
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [req-64dea08d-9521-41a6-9aad-4ec2d2581d90 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce] Instance failed to spawn
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce] Traceback (most recent call last):
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/nova/compute/manager.py", line 2233, in _build_resources
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/nova/compute/manager.py", line 2079, in _build_and_run_instance
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/nova/virt/ironic/driver.py", line 813, in spawn
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/oslo_utils/excutils.py", line 220, in __exit__
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]     self.force_reraise()
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/oslo_utils/excutils.py", line 196, in force_reraise
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]     six.reraise(self.type_, self.value, self.tb)
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/nova/virt/ironic/driver.py", line 805, in spawn
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/eventlet/event.py", line 121, in wait
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]     return hubs.get_hub().switch()
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/eventlet/hubs/hub.py", line 294, in switch
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]     return self.greenlet.switch()
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/oslo_service/loopingcall.py", line 136, in _run_loop
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]     result = func(*self.args, **self.kw)
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]   File "/usr/lib/python2.7/site-packages/nova/virt/ironic/driver.py", line 428, in _wait_for_active
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce] InstanceDeployFailure: Failed to provision instance 945d15a1-eac3-4686-a7dc-87a98534ebce: Timeout reached while waiting for callback for node 0a9c20b5-5bca-4065-87cd-83573b1e1234
+2017-07-28 11:00:39.006 1233991 ERROR nova.compute.manager [instance: 945d15a1-eac3-4686-a7dc-87a98534ebce]
+
+最终处理结果：代码部分出现问题，默认vlan编号为2，但是配置文件设置成888之后，并没有将vlan标志设置成888.
+
+
+
+
+
+
+
+
+
+2017-07-31 14:41:38.388 3717237 DEBUG ironic.common.states [req-dcd27552-4a17-4be9-bb12-50a965cb7cf2 - - - - -] Entering new state 'deploying' in response to event 'deploy' on_enter /usr/lib/python2.7/site-packages/ironic/common/states.py:209
+2017-07-31 14:41:38.425 3717237 DEBUG ironic.drivers.modules.deploy_utils [-] Deploy boot mode is None for 0a9c20b5-5bca-4065-87cd-83573b1e1234. get_boot_mode_for_deploy /usr/lib/python2.7/site-packages/ironic/drivers/modules/deploy_utils.py:796
+2017-07-31 14:41:38.426 3717237 INFO ironic.drivers.modules.netman_utils [-] set provision vlan for bm 888
+2017-07-31 14:41:38.430 3717237 DEBUG ironic.common.states [-] Exiting old state 'deploying' in response to event 'fail' on_exit /usr/lib/python2.7/site-packages/ironic/common/states.py:203
+2017-07-31 14:41:38.431 3717237 DEBUG ironic.common.states [-] Entering new state 'deploy failed' in response to event 'fail' on_enter /usr/lib/python2.7/site-packages/ironic/common/states.py:209
+2017-07-31 14:41:38.445 3717237 ERROR ironic.conductor.manager [-] Error while preparing to deploy to node 0a9c20b5-5bca-4065-87cd-83573b1e1234: 
+2017-07-31 14:41:38.468 3717237 DEBUG ironic.conductor.task_manager [-] Successfully released exclusive lock for node deployment on node 0a9c20b5-5bca-4065-87cd-83573b1e1234 (lock was held 0.76 sec) release_resources /usr/lib/python2.7/site-packages/ironic/conductor/task_manager.py:345
+2017-07-31 14:41:38.657 1064242 DEBUG ironic.conductor.manager [req-25d4681d-f951-41ac-8280-8c7b72d19cee - - - - -] RPC do_node_tear_down called for node 0a9c20b5-5bca-4065-87cd-83573b1e1234. do_node_tear_down /usr/lib/python2.7/site-packages/ironic/conductor/manager.py:369
+2017-07-31 14:41:38.659 1064242 DEBUG ironic.conductor.task_manager [req-25d4681d-f951-41ac-8280-8c7b72d19cee - - - - -] Attempting to get exclusive lock on node 0a9c20b5-5bca-4065-87cd-83573b1e1234 (for node tear down) __init__ /usr/lib/python2.7/site-packages/ironic/conductor/task_manager.py:226
+2017-07-31 14:41:38.674 1064242 DEBUG ironic.conductor.task_manager [req-25d4681d-f951-41ac-8280-8c7b72d19cee - - - - -] Node 0a9c20b5-5bca-4065-87cd-83573b1e1234 successfully reserved for node tear down (took 0.01 seconds) reserve_node /usr/lib/python2.7/site-packages/ironic/conductor/task_manager.py:273
+2017-07-31 14:41:38.697 1064242 DEBUG ironic.common.states [req-25d4681d-f951-41ac-8280-8c7b72d19cee - - - - -] Exiting old state 'deploy failed' in response to event 'delete' on_exit /usr/lib/python2.7/site-packages/ironic/common/states.py:203
+
+
+
+
+
+
+2017-07-31 15:22:19.956 1232735 DEBUG oslo_concurrency.processutils [-] Running cmd (subprocess): ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpSbPxaP power off execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:344
+2017-07-31 15:22:20.263 1232735 DEBUG oslo_concurrency.processutils [-] CMD "ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpSbPxaP power off" returned: 1 in 0.308s execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:374
+2017-07-31 15:22:20.264 1232735 DEBUG oslo_concurrency.processutils [-] u'ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpSbPxaP power off' failed. Not Retrying. execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:422
+2017-07-31 15:22:20.265 1232735 ERROR ironic.drivers.modules.ipmitool [-] IPMI Error while attempting "ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpSbPxaP power off"for node 0a9c20b5-5bca-4065-87cd-83573b1e1234. Error: Unexpected error while running command.
+Command: ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpSbPxaP power off
+Exit code: 1
+Stdout: u''
+Stderr: u'Set Chassis Power Control to Down/Off failed: Command not supported in present state\n'
+2017-07-31 15:22:20.266 1232735 WARNING ironic.drivers.modules.ipmitool [-] IPMI power off failed for node 0a9c20b5-5bca-4065-87cd-83573b1e1234.
+2017-07-31 15:22:25.266 1232735 DEBUG oslo_concurrency.processutils [-] Running cmd (subprocess): ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpxAIzPn power status execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:344
+2017-07-31 15:22:25.455 1232735 DEBUG oslo_concurrency.processutils [-] CMD "ipmitool -I lanplus -H 10.100.0.65 -L ADMINISTRATOR -U USERID -R 12 -N 5 -f /tmp/tmpxAIzPn power status" returned: 0 in 0.189s execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:374
+
+
+
+2017-07-31 16:09:41.942 1358504 DEBUG ironic_lib.utils [req-1699b580-d641-4faf-9698-5b09c89d793a - - - - -] Starting dd process. dd /usr/lib/python2.7/site-packages/ironic_lib/utils.py:138
+2017-07-31 16:09:41.943 1358504 DEBUG oslo_concurrency.processutils [req-1699b580-d641-4faf-9698-5b09c89d793a - - - - -] Running cmd (subprocess): sudo ironic-rootwrap /etc/ironic/rootwrap.conf dd if=/var/lib/ironic/images/0a9c20b5-5bca-4065-87cd-83573b1e1234/disk of=/dev/disk/by-path/ip-192.168.223.107:3260-iscsi-iqn.2008-10.org.openstack:0a9c20b5-5bca-4065-87cd-83573b1e1234-lun-1 bs=1M oflag=direct execute /usr/lib/python2.7/site-packages/oslo_concurrency/processutils.py:344

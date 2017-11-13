@@ -1,0 +1,11 @@
+ref:
+http://os.51cto.com/art/201106/267355.htm
+http://blog.csdn.net/iloveyin/article/details/7764310
+
+puppet把需要管理的对象抽象成为资源，每个资源具有不同的属性，puppet语言就是描述这些资源和资源之间关系的一种语言。
+
+常见的资源类型有file(文件管理)、package(软件包管理)、service(服务管理)。
+
+一、资源：
+
+

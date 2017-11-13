@@ -1,0 +1,8 @@
+nova bp分析：
+
+1：To keep the provisioning process away from the tenant network, we need to wait for the deployment to complete before binding the port, which only Ironic can control.
+为了使得部署过程远离租户网络，在绑定port之前需要等待部署过程完成，这个过程只有ironic可以控制。
+
+ As part of the deployment process, Ironic will make a port-update call with: 1) a binding:host_id value of “baremetal:$node_uuid”, and 2) physical switchport information necessary to connect the port. This will happen while the virt driver is waiting for the Ironic node to get a state of “active”.
+
+  

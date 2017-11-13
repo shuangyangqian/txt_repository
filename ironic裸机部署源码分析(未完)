@@ -1,0 +1,30 @@
+1.Nova-compute在启动的时候会初始化nova.service.py的Service类，调用launch方法将nova-compute的进程拉起来，最终调用到Service类的start方法：
+
+ def start(self):
+         verstr = version.version_string_with_package()
+         LOG.info(_LI('Starting %(topic)s node (version %(version)s)'),
+                   {'topic': self.topic, 'version': verstr})
+         self.basic_config_check()
+         self.manager.init_host()
+         self.model_disconnected = False
+         ctxt = context.get_admin_context()
+         self.service_ref = objects.Service.get_by_host_and_binary(
+             ctxt, self.host, self.binary)
+         if not self.service_ref:
+             try:
+                 self.service_ref = self._create_service_ref(ctxt)
+             except (exception.ServiceTopicExists,
+                     exception.ServiceBinaryExists):
+                 # NOTE(danms): If we race to create a record with a sibling
+                 # worker, don't fail here.
+                 self.service_ref = objects.Service.get_by_host_and_binary(
+                     ctxt, self.host, self.binary)
+ 
+         self.manager.pre_start_hook()
+         ......
+
+
+nova.virt.ironic.driver.py:
+        self.ironicclient = client_wrapper.IronicClientWrapper()
+
+

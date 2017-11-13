@@ -1,0 +1,90 @@
+1.http://specs.openstack.org/openstack/ironic-specs/specs/6.2/add-infiniband-support.html
+InfiniBand架构是一种支持多并发链接的“转换线缆”技术，它是新一代服务器硬件平台的I/O标准。由于它具有高带宽、低延时、 高可扩展性的特点，它非常适用于服务器与服务器（比如复制，分布式工作等），服务器和存储设备（比如SAN和直接存储附件）以及服务器和网络之间（比如LAN， WANs和the Internet）的通信 。
+
+目前pxe启动和inspector的时候只支持Ethernet interfaces，该BP是为了支持InfiniBand。
+
+2.http://specs.openstack.org/openstack/ironic-specs/specs/6.2/collect-logs-from-agent-ramdisk.html
+支持从agent ramdisk搜集日志信息
+主要是使用：
+Syslog: is the standardized protocol for message logging, described in RFC. All distros supports syslog in different implementations rsyslogd, syslogd, syslog-ng
+Systemd journal-remote: systemd tool to send/receive journal messages over the network.
+
+change in IPA：
+	A new kernel parameter is added use_syslog.
+	use_syslog (Boolean): Whether IPA should send the logs to syslog or not. Defaults to “False”.
+
+change in Ironic：
+	New pxe_append parameters are added use_syslog and syslog_server in [agent] section.
+	use_syslog boolean): Whether IPA should send the logs to syslog or not. Defaults to “False”.
+	syslog_server (string): IP address or DNS name of syslog server to send system logs to. Defaults to “IP address of ironic-conductor node.” The variable may be used to configure rsyslogd or syslog or any other syslog server implementation.
+
+changes in agent ramdisk:
+	Bootstrap should support remote logging via syslog/systemd. All agent ramdisk changes are related to logging tool configuration (rsyslogd, syslogd, journal-remote). The logging service should be started right after networking service to make sure that we send all logs from OpenStack services. On Collector side (ironic-conductor) we receive messages from Originator (agent ramdisk) and place the according to local rules. It may be directory on the filesystem: /var/log/remote/ironic/<node_uuid>/<log_filename>	
+
+
+3.http://specs.openstack.org/openstack/ironic-specs/specs/6.2/ipxe-swift-tempurls.html
+PXE是Intel提出的，用以网卡启动。通过DHCP获取IP以及TFTP获取启动文件。 
+gPXE/iPXE是PXE的扩展版，支持HTTP等多种获取手段。iPXE由gPXE分支而来(fork)，功能更丰富。
+
+目前，ipxe driver需要一个外部的HTTP server来为deploy ramdisk和kernel提供服务。当使用galnce的时候，ironic-conduvtor将images从glance抓取下来，放到http server的root目录下。一旦hash 只发生改变，新的ironic-conductor会接手这件事，并且会做同样的事情。
+
+当glance使用后端swift的时候不应该使用一个外部的HTTP server。使用swift我们可以生成一个临时的URL来传给ipxe去下载image，省去认证的步骤。
+
+4.http://specs.openstack.org/openstack/ironic-specs/specs/6.2/ironicclient-osc-plugin.html
+在ironicclient中定义了支持openstack cli的结构和样式，
+比如openstack baremetal node boot device set之类的形式
+
+5.http://specs.openstack.org/openstack/ironic-specs/specs/6.2/third-party-ci.html
+规定了一些第三方driver的持续集成测试的时间点和测试要求。
+
+6.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/add-pluggable-metrics-backend-for-ironic-and-ipa.html
+为ironic和IPA增加了额外的度量数据和report feature。
+使用场景：Metrics可以被管理员使用，来判断系统那一部分运行快，那一部分运行慢。
+
+提议的改变：
+1.增加一个共享的插件化的度量report系统
+2.实现一个通用的度量日志系统：
+	Gauges (generic numerical data).通过用的数据
+    Counters (increment/decrement a counter).计数器
+    Timers (time something).时间
+    Decorators, and context managers for same.装饰器
+3.实现一个统计度量日志系统
+4.ironic度量数据包括：
+	对API request进行计数和计时
+	对RPC API进行计数和计时
+	对ConductorManager中的最长调用的函数进行计数和计时
+	对重要的driver函数进行计数和计时
+	对node state的变化进行计数和计时
+5.IPA度量数据包括，但是不限于：
+	image下载和读写的计数和计时
+	部署、清除的计数和计时
+
+7.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/agent-api.html
+将agent vendor passthru添加到core API中去
+vendor passthru当初设计的就是当vendors的特殊feature没有被广泛采用的时候，先放到这里。但是IPA在进行部署和clean的时候，两个API endpoint对于IPA来说非常重要。
+
+
+8.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/collect-system-logs-from-ipa.html
+支持从IPA搜集部署系统的日志信息。
+
+在IPA和ironic中添加了一些方法，支持从IPA获得部过程的一些日志信息。
+
+9.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/keystone-policy-support.html
+ironic目前是一个“all-or-nothing”的访问控制系统，只通过密码来进行访问控制。这个模型就限制了具有不同的权限的不同的用户和用户组和ironic进行交互的使用。比如说，一个系统管理员只允许对node进行maintenance，不允许provision node。
+
+被提议的改变：
+	加入合适的metadata，比如role，通过实现KeystoneMiddleware.auth_token support的支持来对role进行区分。
+	对于每一个endpoint API的每一个RESTFul api进行策略规则的定义
+	配置每个API endpoint的策略，允许特定的user进行access
+	。。。
+
+10.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/network-provider.html
+ironic多租户
+
+11.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/node-resource-class.html
+
+
+12.http://specs.openstack.org/openstack/ironic-specs/specs/6.1/nova-compatible-serial-console.html
+
+13.http://specs.openstack.org/openstack/ironic-specs/specs/6.0/active-node-creation.html
+目前在ironic中注册节点的时候第一步是给node添加一个明确的状态。但是当一个云管理员希望将一个云系统的node迁移到另外一个系统的时候，其状态想继承自原来的系统中的node的状态。新添加的功能可以直接将迁移过去的node置为active状态。

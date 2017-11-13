@@ -1,0 +1,79 @@
+No1：概念介绍：
+1.bootstrap
+引导加载程序，是系统加电之后运行的第一段程序。PC机中的bootstrap由BIOS(本质上就是一段固件程序)和位于硬盘MBR(主引导记录，一般位于第一块硬盘的第一个扇区)中的OS Bootloader(比如，LILO和GRUB等)一起组成。BIOS在完成硬件检测和资源分配后，硬盘MBR中的Bootloader读到系统的RAM中，然后控制权交给OS Boootloader。
+Bootloader将kernel和ramdisk读到内存中，然后跳转到内核的入口执行。
+
+2.kernel
+Linux系统的内核，包含最基本的程序。
+
+3.ramdisk
+randisk是一种基于内存的虚拟文件系统，就好像你有一块硬盘，你可以对上面的文件进行增删改查，但是系统一断电，就什么都没有了，无法保存。一般上驱动程序放在这上面。
+
+4.initrd/initramfs
+initrd是boot loader initialized RAM disk,顾名思义，是在系统初始化引导时候用到的ramdisk。也就是由启动加载器所初始化的RamDisk设备，他的作用是完善内核的模块机制，使内核的初始化流程更具弹性；内核以及initrd都是BootLoader在机器启动之后被加载至内存的指定位置，主要功能是按需加载模块和按需更改根文件系统。initramfs和initrd功能类似，是initrd的改进版本，改进了intird大小不可改变的缺点。
+
+No2：为什么一定要使用initrd
+在早期的Linux系统中，一般就只有软盘或者硬盘被用来作为Linux的根文件系统，因此很容易把这些设备的驱动程序集成到内核中。但是现在根文件系统 可能保存在各种存储设备上，包括SCSI, SATA, U盘等等。因此把这些设备驱动程序全部编译到内核中显得不太方便，违背了“内核”的精神。在Linux内核模块自动加载机制中可以利用udevd可以实现内核模块的自动加载，因此我们希望根文件系统的设备驱动程序也能够实现自动加载。但是这里有一个矛盾，udevd是一个可执行文件，在根文件系统被挂载前，是不可能执行udevd的，但是如果udevd没有启动，那就无法自动加载根根据系统设备的驱动程序，同时也无法在/dev目录下建立相应的设备节点。
+为了解决这个矛盾，于是出现了initrd(boot loader initialized RAM disk)。initrd是一个被压缩过的小型根目录，这个目录中包含了启动阶段中必须的驱动模块，可执行文件和启动脚本。包括上面提到的udevd，当系统启动的时候，bootload会把内核和initrd文件读到内存中，然后把initrd的起始地址告诉内核。内核在运行过程中会解压initrd，然后把initrd挂载为根目录，然后执行根目录中的/initrc脚本，可以在这个脚本中运行initrd中的udevd，让它来自动加载设备驱动程序以及 在/dev目录下建立必要的设备节点。在udevd自动加载磁盘驱动程序之后，就可以mount真正的根目录，并切换到这个根目录中。
+
+linux启动为什么一定要使用initrd？
+如果把需要的功能全都编译到内核中(非模块方式)，只需要一个内核文件即可。initrd 能够减小启动内核的体积并增加灵活性，如果你的内核以模块方式支持某种文件系统(例如ext3, UFS)，而启动阶段的驱动模块放在这些文件系统上,内核是无法读取文件系统的，从而只能通过initrd的虚拟文件系统来装载这些模块。这里有些人会问: 既然内核此时不能读取文件系统，那内核的文件是怎么装入内存中的呢?答案很简单，Grub是file-system sensitive的，能够识别常见的文件系统。通用安装流程如下：
+
+1.启动，BIOS完成硬件检测和资源分配，选择操作系统的启动（安装）模式（此时，内存是空白的）
+2.然后根据相关的安装模式，寻找操作系统的引导程序（bootloader）（不同的模式，对应不同的引导程序当然也对应着不同的引导程序存在的位置）
+3.导程序加载文件系统初始化（initrd）程序和内核初始镜像（vmlinuz），完成操作系统安装前的初始化
+3.操作系统开始安装相关的系统和应用程序。
+
+PXE部署流程
+PXE协议分为client和server两端，PXE client在网卡的ROM中，当计算机启动时，BIOS把PXE client调入内存执行，并显示出命令菜单，经用户选择后，PXE Client将放置在远端的操作系统通过网络下载到本地运行。
+
+具体安装流程如下：
+1：客户机从自己的PXE网卡启动，网卡中包含PXE Client、DHCP Client、TFTP Client，向本网络中的DHCP服务器获取IP，并找到引导文件存放的位置。
+2：DHCP服务器返回分给客户机IP以及NBP(Network Bootstrap Program )文件的放置位置(该文件一般是放在一台TFTP服务器上)。
+3：客户机向本网络中的TFTP服务器索取NBP。
+4：客户机获得NBP文件之后执行改文件。
+5：根据NBP文件的执行结果，通过TFTP服务器加载内核和文件系统。
+6：安装操作系统。
+
+流程小节：
+客户机广播DHCP请求→服务器相应请求，由DHCP和TFTP服务器配置得到IP和引导程序所在位置→客户端下载引导程序并开始运行→引导程序读取系统镜像→安装操作系统。
+
+相关文件位置与内容:
+
+    dhcp配置文件/etc/dhcpd/dhcp.conf——ip管理与引导程序名称
+    tftp配置文件/etc/xinetd.d/tftp——tftp根目录，和上面的引导程序名称组成完整路径
+    引导程序读取的配置文件/tftpboot/pxelinux.cfg/default——启动内核其他
+
+Ironic部署流程：
+
+ 1.部署物理机的请求通过 Nova API 进入Nova；
+ 2.Nova Scheduler 根据请求参数中的信息（指定的镜像和硬件模板等）选择合适的物理节点；
+ 3.Nova 创建一个 spawn 任务，并调用 Ironic API 部署物理节点，Ironic 将此次任务中所需要的硬件资源保留，并更新数据库；
+ 4.Ironic 与 OpenStack 的其他服务交互，从 Glance 服务获取部署物理节点所需的镜像资源，并调用 Neutron 服务为物理机创建网路端口；
+ 5.Ironic 开始部署物理节点，PXE driver 准备 tftp bootloader，IPMI driver 设置物理机启动模式并将机器上电；
+ 6.物理机启动后，通过 DHCP 获得 Ironic Conductor 的地址并尝试通过 tftp 协议从 Conductor 获取镜像，Conductor 将部署镜像部署到物理节点上后，通过 iSCSI 协议将物理节点的硬盘暴露出来，随后写入用户镜像，成功部署用户镜像后，物理节点的部署就完成了。
+
+Ironic给物理机器部署系统详解：
+1：修改配置文件NOVA.CONF
+[DEFAULT]  
+scheduler_host_manager = nova.scheduler.ironic_host_manager.IronicHostManager  
+compute_driver = nova.virt.ironic.driver.IronicDriver  
+compute_manager = ironic.nova.compute.manager.ClusteredComputeManager  
+[ironic]  
+admin_username = ironic  
+admin_password = unset  
+admin_url = http://127.0.0.1:35357/v2.0  
+admin_tenant_name = service
+
+compute_manager的代码实现是在ironic项目里面。
+
+2：部署流程(http://www.cnblogs.com/menkeyi/p/6063557.html)
+第一步, nova-api接收到nova boot的请求，通过消息队列到达nova-scheduler
+
+第二步, nova-scheduler收到请求后，在scheduler_host_manager里面处理。nova-scheduler会使用flavor里面的额外属性extra_specs，像cpu_arch，baremetal:deploy_kernel_id，baremetal:deploy_ramdisk_id等过滤条件找到相匹配的物理节点，然后发送RPC消息到nova-computer。
+
+第三步,nova-computer拿到消息调用指定的driver的spawn方法进行部署，即调用nova.virt.ironic.driver.IronicDriver.spawn()，该方法做了什么操作呢？我们来对代码进行分析（下面的代码只保留了主要的调用）。
+
+
+
+

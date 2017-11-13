@@ -1,0 +1,24 @@
+1:gerrit上查询特定项目特定分支的patch信息。
+https://review.easystack.cn/#/q/status:merged+project:easystack/nova+branch:stable/4.0
+
+
+2:
+git reset HEAD~  之后，当前未向远程提交的commit会保存到暂存区，无论是自己的commit还是从别处cherry-pick来的
+git checkout -- xxxxxx  之后，当前工作暂存区的修改会被丢弃，回到没有修改之前的状态
+
+3:
+先把需要cherry-pick的patchcherry-pick下来，然后解决冲突
+
+完事之后需要执行git rebase -i xxxx   xxxx为所有cherry-pick下来的patch之前的那个patch
+
+第一个使用pick  第二个使用s
+
+按回车
+
+
+4：cherry-pick下来的代码希望看到修改了什么：
+  1）先cherry-pick代码
+  2）git reset HEAD^  回退一个commit
+  3）git status  查看修改了哪些文件  同时使用git diff来查看具体的文件修改
+  4）git reflog  查看完之后看看cherry-pick那一个commit id
+  5）git reset xxx   xxx为第4）步的那个commit id

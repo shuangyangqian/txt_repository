@@ -1,0 +1,21 @@
+nova：
+
+1:refs/meta/config代表啥意思？
+2：easystack/xxx分支是怎么产生的，有什么用处，需不需要维护
+3：stable/icehouse etc这些分支是同步社区的分支，不允许往里提私有patch，这些是不是也要加到标准分支里
+4：Vancouver/icehouse这个分支是干啥的，需要维护吗
+
+
+分支是需要我们自己重命名还是统一修改
+
+
+
+ironic  community/stable/mitaka
+        stable/mitaka
+python-novaclient vancouver/2.18.1
+glance milestone-proposed
+netman  add-interfaces-on-getvlans
+
+
+
+2b62289ff80e1bd44252a6abafa92b067bd202b4

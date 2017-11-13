@@ -1,0 +1,58 @@
+针对多租户
+
+1.使用优先级：
+	第一：netmam可以正常使用  
+	第二：关闭多租户可以使用
+	第三：社区的sdn方式的可以使用
+
+第一步工作：netman可以正常run起来，先改代码合到4.1，同事考虑加开关，来满足上述一些需求
+
+测试得等到测试组出iso才可以测试
+
+
+
+
+看不懂的BP：
+ironic：
+http://specs.openstack.org/openstack/ironic-specs/specs/6.1/nova-compatible-serial-console.html
+
+nova：
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-mq-connection-switching.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/libvirt-instance-storage.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/neutron-routed-networks.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/os-vif-library.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers-allocations.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/use-castellan-key-manager.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/user-id-based-policy-enforcement.html
+
+
+1.build iso
+每个组件搞一个文档，关于puppet部署的时候需要安装什么软件，配置什么参数，以便别人接手的时候清楚。
+
+发布越早  功能开发可以在4.1上做  公司内部就可以少维护一个版本。
+
+不仅要看BP描述的什么  要看n版本进了什么  而不是plan什么，或者说M版本的BP，在N版本实现的也要搞进来。
+新功能怎么弄：（谁来推动，郑晨）
+
+puppet测试，目前是：roller team集中测试，有问题找各个组件owner。
+
+推动各个组的私有patch进社区。
+
+
+
+先跑tempest：下周安装出来，跑tempest，跑通之后再前台界面点测试。
+
+这周五（11.3）出可安装ISO；
+下周上半周测试自己功能；
+下周二：
+
+
+
+治海，我找到一个简单的bug。
+https://bugs.launchpad.net/ironic/+bug/1651775
+说的意思大概就是ironic/api-ref-source/parameters.yaml这里面定义的一些变量，没有区分是request的还是response的。我现在想到两种改法：第一种就是参考别的项目，如glance，直接把
+ironic/api-ref-source/parameters.yaml里的323行# variables in the API response body改成# variables in body。第二种就是看看这些变量哪些是属于request的，哪些是属于response的，分开写。当然，第二种工作量比较大。你觉得哪一种能提上去。。。
+first patch to the ironic community
+https://bugs.launchpad.net/ironic/+bug/1651775
+

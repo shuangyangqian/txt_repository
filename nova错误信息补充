@@ -1,0 +1,136 @@
+创建云主机：
+1.错误描述：没有可用的主机,调度不到满足条件的host
+错误类型：nova.exception.NoValidHost
+错误信息：msg_fmt = _("No valid host was found. %(reason)s")
+2.错误描述：无法解析传入的az
+错误类型：nova.exception.InvalidInput
+错误信息：Unable to parse availability_zone
+3.错误描述：输入信息无效
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg_fmt = _("Invalid input received: %(reason)s")
+4.错误描述：当前版本不支持给block device加tag
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg = _('Block device tags are not yet supported.')
+5.错误描述：缺少imageRef参数
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg = _("Missing imageRef attribute")
+6.错误描述：当前版本不支持给interface device加tag
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg = _('Network interface tags are not yet supported.')
+7.错误描述：未知参数port，只有neutron v2.0支持port parameter
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg = _("Unknown argument: port")
+8.错误描述：指定的固定ip地址无法绑定到指定port上，因为port上已经有一个IP了。
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：msg = _("Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': the two cannot be specified together.") % {"addr": request.address, "port": request.port_id}
+9.错误描述：错误的网络格式
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：expl = _('Bad network format: missing %s') % key
+10.错误描述：错误的网络格式，缺少参数key
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：expl = _('Bad network format: missing %s') % key
+11.错误描述：错误的网络格式
+错误类型：exc.HTTPBadRequest 返回400
+错误信息：expl = _('Bad networks format')
+12.错误描述：找不到请求的flavor_id
+错误类型：exc.exception.FlavorNotFound
+错误信息：msg_fmt = _("Flavor %(flavor_id)s could not be found.")
+13.错误描述：固定IP的尝试绑定次数不能大于1
+错误类型：exc.exception.InvalidFixedIpAndMaxCountRequest
+错误信息：msg = _("max_count cannot be greater than 1 if an fixed_ip is specified.")
+14.错误描述：多个instances不能被绑定到一个port上，请一个一个部署
+错误类型：exc.exception.MultiplePortsNotApplicable
+错误信息：msg = _("Unable to launch multiple instances with"
+                   " a single configured port ID. Please launch your"
+                   " instance one by one with different ports.")
+
+15.错误描述：请求的az不可用
+错误类型：exc.exception.InvalidRequest
+错误信息：msg = _('The requested availability zone is not available')
+16.错误描述：BDM无效，获取image失败
+错误类型：exc.exception.InvalidBDMImage
+错误信息：msg_fmt = _("Block Device Mapping is Invalid: "
+                "failed to get image %(id)s.")
+17.错误描述：链接cinder host失败
+错误类型：exc.exception.CinderConnectionFailed
+错误信息：msg_fmt = _("Connection to cinder host failed: %(reason)s")
+18.错误描述：BDM无效，获取volume失败
+错误类型：exc.exception.InvalidBDMVolume
+错误信息：msg_fmt = _("Block Device Mapping is Invalid: "
+                "failed to get volume %(id)s.")
+19.错误描述：块设备不可启动
+错误类型：exc.exception.InvalidBDMVolumeNotBootable
+错误信息：msg_fmt = _("Block Device %(id)s is not bootable.")
+20.错误描述：user data应该是基于base 64格式的
+错误类型：exc.exception.InstanceUserDataMalformed
+错误信息：msg_fmt = _("User data needs to be valid base 64.")
+21.错误描述：port数量达到上限
+错误类型：exc.exception.PortLimitExceeded
+错误信息：msg_fmt = _("Maximum number of ports exceeded")
+22.错误描述：metadata数目达到上限
+错误类型：exc.exception.MetadataLimitExceeded
+错误信息：msg_fmt = _("Maximum number of metadata items exceeds %(allowed)d")
+23.错误描述：metadata无效
+错误类型：exc.exception.InvalidMetadata
+错误信息：msg_fmt = _("Invalid metadata: %(reason)s")
+24.错误描述：metadata的size不正确
+错误类型：exc.exception.InvalidMetadataSize
+错误信息：msg_fmt = _("Invalid metadata size: %(reason)s")
+
+25.错误描述：file的path太长
+错误类型：exc.exception.OnsetFilePathLimitExceeded
+错误信息：msg_fmt = _("Personality file path too long")
+
+26.错误描述：file的内容太长
+错误类型：exc.exception.OnsetFileContentLimitExceeded
+错误信息：msg_fmt = _("Personality file content too long")
+
+22.错误描述：flavor的disk大小比image要求的还小
+错误类型：exc.exception.FlavorDiskSmallerThanImage
+错误信息：msg_fmt = _("Flavor's disk is too small for requested image. Flavor disk "
+                "is %(flavor_size)i bytes, image is %(image_size)i bytes.")
+
+
+
+创建云主机快照：
+1.错误描述：image的metadata达到上限
+错误类型：HTTPForbidden  403
+错误信息：expl = _("Image metadata limit exceeded")
+
+2.错误描述：image的metadata的key值不能为空
+错误类型：HTTPBadRequest  400
+错误信息：expl = _("Image metadata key cannot be blank")
+
+3.错误描述：image的metadata的key值太长
+错误类型：HTTPBadRequest  400
+错误信息：expl = _("Image metadata key too long")
+
+4.错误描述：image的metadata无效
+错误类型：HTTPBadRequest  400
+错误信息：expl = _("Invalid image metadata")
+
+5.错误描述：找不到对应的instance
+错误类型：HTTPNotFound  404
+错误信息：msg_fmt = _("Instance %(instance_id)s could not be found.")
+
+6.错误描述：无效的请求，不支持对volume的instance进行backup
+错误类型：exception.InvalidRequest
+错误信息：LOG.info(_LI("It's not supported to backup volume backed "
+                         "instance."), context=context, instance=instance)
+
+创建云主机组：
+1.错误描述：数量达到上限
+错误类型：nova.exception.OverQuota
+错误信息：msg = _("Quota exceeded, too many server groups.")
+
+2.错误描述：ValueError导致的400
+错误类型：HTTPBadRequest  400
+
+
+创建物理主机：
+1.错误描述：neutron创建安全组失败
+错误类型：NeutronClientException 
+错误信息："Neutron Error creating security group %s"
+
+2.错误描述：调度不到合适和物理主机
+错误信息：no valid host was found

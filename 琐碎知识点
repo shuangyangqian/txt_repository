@@ -1,0 +1,61 @@
+开放防火墙某个端口：
+#iptables -I INPUT -p tcp --dport 6385 -j ACCEPT
+
+查看端口使用情况：
+#netstat -ntulp
+
+某个服务的systemd文件所在目录：
+/usr/lib/systemd/system/dnsmasq.service
+可以修改文件中此行：ExecStart=/usr/bin/nova-compute -config-file=/etc/nova/nova-compute.conf
+来指定该服务的配置文件目录。
+
+
+制作一个deploy镜像：
+https://docs.openstack.org/developer/ironic/mitaka/deploy/install-guide.html#building-or-downloading-a-deploy-ramdisk-image
+
+
+定制deploy镜像：
+https://docs.openstack.org/developer/ironic-python-agent/
+https://docs.openstack.org/developer/ironic-python-agent/#customizing-the-image
+
+
+从源码制作：（https://docs.openstack.org/developer/ironic/mitaka/deploy/install-guide.html#building-or-downloading-a-deploy-ramdisk-image ）
+方法一：通过CoreOS tools
+1：下载IPA源码
+#git clone https://github.com/openstack/ironic-python-agent
+2：安装依赖关系
+#sudo apt-get install docker.io gzip uuid-runtime cpio findutils grep gnupg
+3：切换到coreos目录
+#cd ironic-python-agent/imagebuild/coreos
+4：启动docker进程
+#sudo service docker start
+5：制作镜像
+#make
+上述步骤完成之后会在文件夹UPLOAD下看到制作成功的镜像。
+
+
+定制coreos镜像的deploy镜像的方法一，修改/ironic-python-agent/imagebuild/coreos/oem下的cloud-config.yml文件
+参考地址：https://coreos.com/os/docs/latest/cloud-config.html
+
+Access via ssh or console:
+https://docs.openstack.org/developer/ironic-python-agent/troubleshooting.html#troubleshooting-ironic-python-agent-ipa
+
+using diskimage build to build an image:
+https://docs.openstack.org/developer/diskimage-builder/user_guide/building_an_image.html
+
+keystone endpoint-create --service-id $950d410b5dfb4b6a9a201838b7cb07b6 --publicurl http://172.16.10.2:6385 --internalurl http://10.120.1.2:6385 --adminurl http://10.120.1.2:6385 --region RegionOne \
+
+
+
+#network和subnet之间的关系
+subnet是一个IPV4或者IPV6地址段。instance的IP从subnet中分配，每个subnet需要定义其IP地址和子网掩码。
+subnet和network之间是多对一的关系，一个subnet只能属于一个network；一个network可以有多个subnet，这些subnet可以是不同的IP段，但是不能有重叠。
+有效的subnet配置：
+network A：  subnet A-a：10.10.1.0/24  {"start": "10.10.1.1", "end": "10.10.1.50"}
+             subnet A-b: 10.10.2.0/24  {"start": "10.10.2.1", "end": "10.10.2.50"}
+无效的subne配置：(并不是看IP地址是否有重叠，而是看subnet的CIDR是否有重叠)
+network A    subnet A-a: 10.10.1.0/24  {"start": "10.10.1.1", "end": "10.10.1.50"}
+             subnet A-b: 10.10.1.0/24  {"start": "10.10.1.51", "end": "10.10.1.100"}
+如果subnet不在同一个network中，那么subnet的IP地址和CIDR都是可以重叠的，如下是有效的subnet配置：
+network A    subnet A-a: 10.10.1.0/24  {"start": "10.10.1.1", "end": "10.10.1.50"}
+network B    subnet B-a: 10.10.1.0/24  {"start": "10.10.1.1", "end": "10.10.1.50"}

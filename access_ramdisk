@@ -1,0 +1,82 @@
+=======================================
+ironic部署裸机过程中登陆ramdisk方法总结
+=======================================
+
+通过console登陆ramdisk
+======================
+
+**方法一(说明：本方法采用的镜像是官方提供的镜像，采用镜像里面默认打包进去的用户core来登陆console)：**
+
+1. 修改ironic配置文件/etc/ironic/ironic.conf，在pxe_append_paramscansh参数后添加参数coreos.autologin:
+
+    ``pxe_append_params=nofb nomodeset vga=normal coreos.autologin``    
+
+2. 重启ironic-conductor服务
+
+    ``#service openstack-ironic-conductor restart``
+
+**方法二（说明：通过对官方镜像进行重新打包压缩，注入自定义用户名和密码）：**
+
+1. 在镜像文件的同级目录下新建文件夹tmp_folder，然后进入该文件夹下，将官方镜像解压至该文件夹下：
+
+    ``#zcat ../coreos_production_pxe_image-oem-stable-liberty.cpio.gz \``
+
+    ``| cpio --extract --make-directories``
+
+2. 找到cloud_config.yml文件，编辑该文件，在其末尾加上自定义用户名和密码信息：
+
+    ``#cd ./usr/share/oem``
+
+    ``#cat cloud_config.yml``
+
+    ``...``
+
+    ``users:``
+
+    ``-name : easystack``
+
+    ``passwd: XXXXXXXXXXXXXXX``
+
+    ``groups:``
+    ``-sudo``
+
+   上述name后跟的是用户名，可以根据自己喜好设定；passwd后跟的是密码的hash值，
+
+   可以通过#mkpasswd --method=SHA-512 --rounds=4096获得。
+
+3. 重新打包上传镜像，回到tmp_folder目录，对镜像进行打包：
+
+    ``#find .| cpio --create --format='newc' | gzip -c -9 > \``
+
+    ``../coreos_production_pxe_image_oem-stable.NEW.cpio.gz``
+
+4. 待上述步骤完成之后，回到父目录，会发现重新生成的名字为coreos_production_pxe_image
+
+   _oem-stable.NEW.cpio.gz的镜像，上传即可。部署过程中可以使用自己定义的用户名和密码登陆ramdisk。
+
+通过ssh登陆ramdisk
+==================
+
+**方法一（通过使用官方提供的镜像ssh登陆ramdisk）：**
+
+1. 修改ironic配置文件/etc/ironic/ironic.conf，在pxe_append_paramscansh
+
+   参数后添加参数sshkey="xxxxx"
+
+    ``pxe_append_params=nofb nomodeset vga=normal sshkey="xxxxxxxxx"``
+
+   上述sshkey的内容是你用来ssh登陆ramdisk的主机的公钥信息。
+
+2. 重启ironic-conductor服务
+
+    ``#service openstack-ironic-conductor restart``
+
+   通过添加上述参数，在裸机部署过程中就可以通过添加了ssh公钥信息的主机来ssh访问ramdisk。
+
+**方法二（使用console登陆的方法二重新打包的镜像）：**
+
+1. 参考console登陆的方法二对镜像进行解压重新打包，注入自定义用户名和密码；
+
+2. 通过用户名密码，ssh访问ramdisk。
+
+**重要说明：上述登陆ramdisk的方法都是默认的非root用户，通过执行#sudo su -  无密码获取root权限。**

@@ -1,0 +1,158 @@
+openstack.org不同项目文档入口：https://docs.openstack.org/developer/openstack-projects.html
+
+
+1：使用ESCloud安装好ironic的时候，物理机器上有很多使用virtualbox虚拟出来的网卡，可以选择使用#2网卡地址来充当vboxwebsev.exe的监听地址，监听端口可以使用默认的。如下：
+#VBoxWebSev.exe --host 10.20.0.1 --port 18083
+
+2：注册节点之前必须更改/etc/ironic/ironic.conf,将enabled_drivers=pxe_ipmitool改成pxe_vox。否则会报错。
+
+3：日志信息：
+2017-05-31 19:01:47.231 336390 ERROR ironic.conductor.manager [-] Error in deploy of node 61ec995f-c6cb-4b1a-ab88-4dcf578174e0: Disk volume where '/var/lib/ironic/master_images/tmpWdcii8' is located doesn't have enough disk space. Required 10240 MiB, only 7995 MiB available space present.
+解决办法：为master节点添加一块磁盘。步骤如下：
+(1) 加盘
+(2) 在系统内使用 ll -h /var/lib/ironic 权限属主
+(3) 查看新加磁盘,格式化 
+    fdisk -l
+    mkfs.xfs 磁盘
+(4) 先把 /var/lib/ironic/下的文件清空，挂载磁盘到该目录
+(5) 编辑 /etc/fstab 添加磁盘挂载持久化信息
+    /dev/sdx  /var/lib/ironic xfs defaults 0 0
+(6) 使用chmod chown修改 /var/lib/ironic 的权限与属主
+
+4:忽然有一天发现openstack相关的指令均没有权限使用，返回403。注意查看一下是不是Roller的License过期，如果过期只需要替换License文件即可，不需要重新装系统。
+
+5:设置ssh或者console登陆coreos IPA。
+(1):Access with ssh
+coreos:
+    step1:Add sshkey="ssh-rsa AAAA..." to pxe_append_params setting in ironic.conf file
+    step2:Restart the ironic-conductor with the command service ironic-conductor restart
+    step3:ssh core@<ip-address-of-node>
+diskimage-builder(DIB)
+
+方法*：
+1：下载IPA程序源码，进入imagebuild文件夹，coreos.oem文件夹，修改cloud-config.ymal文件，重新make。
+2：make提示错误，删除oem下的container..文件即可。
+
+
+6：https://review.easystack.cn
+关于替换源码的问题。在Gerrit上下载下来stable/3.4版本的ironic和nova源码，使用git reset回滚到之前的commit。替换源码的时候只能替换相应的几个文件，全部替换可能会出错。
+
+#代码替换问题
+用ESRoller安装好的ESCloud之后，/usr/lib/python2.7/site-packages下的软件包内全部是.pyc和.pyo文件，如果想debug某些问题，需要从gerrit上面下载源码进行替换，替换的时候需要注意安装的ESRoller是什么版本，在本地git仓库内创建本地分支对应远程相应版本的稳定版本分支，这样再进行替换就不会出错。
+
+
+
+
+7.2017-06-01 17:46:13.572 21634 INFO nova.filters [req-7c4e33fe-9502-4b22-b3e5-ac4f31f9d70d e49f5024fcc24db6b4c4750014af047a f7fa57b4346f48788b2c199adfb0818d - - -] Filtering removed all hosts for the request with reservation ID 'r-n6x6v4xb' and instance ID '82ab0f85-88b5-473c-849e-094a17bf6486'. Filter results: ['RetryFilter: (start: 2, end: 2)', 'AvailabilityZoneFilter: (start: 2, end: 2)', 'ComputeFilter: (start: 2, end: 1)', 'ComputeCapabilitiesFilter: (start: 1, end: 1)', 'ImagePropertiesFilter: (start: 1, end: 0)']
+
+原因分析：ComputeFilter过滤掉一个host，ImagePorpertiesFilter过滤掉一个节点。起初怀疑镜像参数上传时写错，真正原因是ironic节点down掉。
++----+------------------+---------------------------+----------+---------+-------+----------------------------+-----------------+
+| Id | Binary           | Host                      | Zone     | Status  | State | Updated_at                 | Disabled Reason |
++----+------------------+---------------------------+----------+---------+-------+----------------------------+-----------------+
+| 1  | nova-cert        | node-3.domain.tld         | internal | enabled | up    | 2017-06-01T09:56:51.000000 | -               |
+| 2  | nova-consoleauth | node-3.domain.tld         | internal | enabled | up    | 2017-06-01T09:56:49.000000 | -               |
+| 3  | nova-scheduler   | node-3.domain.tld         | internal | enabled | up    | 2017-06-01T09:56:51.000000 | -               |
+| 4  | nova-conductor   | node-3.domain.tld         | internal | enabled | up    | 2017-06-01T09:56:51.000000 | -               |
+| 5  | nova-compute     | ironic.compute.domain.tld | nova     | enabled | down  | 2017-06-01T09:17:26.000000 | -               |
+| 6  | nova-compute     | node-4.domain.tld         | nova     | enabled | up    | 2017-06-01T09:56:47.000000 | -               |
++----+------------------+---------------------------+----------+---------+-------+----------------------------+-----------------+
+重启openstack服务可以解决。
+#service openstack-* restart
+
+
+8:2017-06-01 20:06:41.877 49101 ERROR ironic.drivers.modules.virtualbox [-] 'set_boot_device' failed for node 4f53976c-22e0-42f0-bb37-d4732b236329 with error: Operation 'set_boot_device' cannot be performed when vm is powered on.
+通过阅读源码发现这是正常的：
+def set_boot_device(...):
+	...
+	# NOTE(rameshg87): We cannot change the boot device when the vm
+    # is powered on. This is a VirtualBox limitation. We just log
+    # the error silently and return because throwing error will cause
+    # deploys to fail (pxe and agent deploy mechanisms change the boot
+    # device after completing the deployment, when node is powered on).
+    # Since this is driver that is meant only for developers, this
+    # should be okay. Developers will need to set the boot device
+    # manually after powering off the vm when deployment is complete.
+    # This will be documented.
+
+
+9:设置ssh和console登录IPA。https://docs.openstack.org/developer/ironic-python-agent/troubleshooting.html#id17
+ssh登录：
+法一(Coreos)：
+(1):Add sshkey="ssh-rsa AAAA..." to pxe_append_params setting in ironic.conf file
+(2):Restart the ironic-conductor with the command service ironic-conductor restart
+(3):ssh core@<ip-address-of-node>
+法二(DIB):
+&1：使用disk-image-builder制作的镜像也可以使用法一所示的方法，进行公钥注入，进行ssh登录。
+&2：另外一种方法是在制作过程中加入ssh公钥：
+#export DIB_DEV_USER_USERNAME=username
+#export DIB_DEV_USER_PWDLESS_SUDO=yes
+#export DIB_DEV_USER_AUTHORIZED_KEYS=$HOME/.ssh/id_rsa.pub
+#disk-image-create -o /path/to/custom-ipa debian ironic-agent devuser
+-o后面跟的是镜像的输出目录和名称，debian表示的是distro(发行版的linux)，所支持的distro可以查到(https://docs.openstack.org/developer/diskimage-builder/user_guide/supported_distros.html)。ironic-agent表示的支持的element，所支持的element有：https://docs.openstack.org/developer/diskimage-builder/elements.html。这里我们使用的是ironic-agent。
+
+console登录：
+法一(Coreos)：
+&1：通过设置ironic.conf可以设置默认用户core自动登录IPA。
+Adding coreos.autologin to pxe_append_params setting in the ironic.conf file.
+&2：同样也可以自己设置用户名和密码，手动登录。
+(1):解压ramdisk镜像：
+mkdir tmp_folder
+cd tmp_foldereng
+zcat ../coreos_production_pxe_image-oem-stable-mitaka.cpio | cpio --extract --make-directories
+(2):得到密码的hash值：
+mkpasswd --method=SHA-512 --rounds=4096
+(3):更改cloud-config.yml文件：
+cd usr/share/oem
+vim cloud-config.yml
+添加如下内容：
+users:
+  - name: username
+    passwd: $6$5s2u6/jR$un0AvWnqilcgaNB3Mkxd5... <example password hash>
+    groups:
+      - sudo
+(4)：重新压缩镜像：
+find . | cpio --create --format='newc' |gzip -c -9 > ../coreos_production_pxe_image-oem-stable-mitaka.cpio.NEW.gz
+NOTE：同样也可以对cloud-config.yml文件进行添加ssh-key来对新添加的用户进行ssh免密码登陆。
+法二(DIB):
+export DIB_DEV_USER_USERNAME=username
+export DIB_DEV_USER_PWDLESS_SUDO=yes
+export DIB_DEV_USER_PASSWORD=PASSWORD
+disk-image-create -o /path/to/custom-ipa debian ironic-agent devuser
+
+
+
+10:提倡在shell下用TAB补全，用脚本执行任务，减少出错的机会。或者编写一个脚本，起名rm，在脚本里将真实的rm改为mv ，将删除的都mv到一个指定的目录里面，定期清理。
+
+
+11:如果有一天发现web上出现无法获取服务，在CLI里面重启neutron-server服务时，重启失败，报错原因如下：
+[root@node-3 ~]# systemctl status neutron-server.service
+● neutron-server.service - OpenStack Neutron Server
+   Loaded: loaded (/usr/lib/systemd/system/neutron-server.service; enabled; vendor preset: disabled)
+   Active: failed (Result: exit-code) since Mon 2017-06-05 16:14:11 CST; 11s ago
+  Process: 277034 ExecStart=/usr/bin/neutron-server --config-file /usr/share/neutron/neutron-dist.conf --config-dir /usr/share/neutron/server --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugin.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-server --log-file /var/log/neutron/server.log (code=exited, status=1/FAILURE)
+ Main PID: 277034 (code=exited, status=1/FAILURE)
+
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron   File "/usr/lib64/python2.7/tempfile.py", line 265, in gettempdir
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron     tempdir = _get_default_tempdir()
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron   File "/usr/lib64/python2.7/tempfile.py", line 212, in _get_default_tempdir
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron     ("No usable temporary directory found in %s" % dirlist))
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron IOError: [Errno 2] No usable temporary directory found in ['/tmp', '/var/tmp.../tmp', '/']
+Jun 05 16:14:11 node-3.domain.tld neutron-server[277034]: 2017-06-05 16:14:11.252 277034 ERROR neutron
+Jun 05 16:14:11 node-3.domain.tld systemd[1]: neutron-server.service: main process exited, code=exited, status=1/FAILURE
+Jun 05 16:14:11 node-3.domain.tld systemd[1]: Failed to start OpenStack Neutron Server.
+Jun 05 16:14:11 node-3.domain.tld systemd[1]: Unit neutron-server.service entered failed state.
+Jun 05 16:14:11 node-3.domain.tld systemd[1]: neutron-server.service failed.
+Hint: Some lines were ellipsized, use -l to show in full.
+
+上述出错是因为master节点磁盘空间占满的缘故，删除master节点上一些用不到的文件腾出一些空间即可。
+
+
+
+11：master节点非正常关机的情况下，经常出现再次开机一直闪login incorrect。目前还不清楚是什么原因，初步怀疑是因为新加了一块磁盘的缘故。
+
+
+11:关于disk-image-create:
+https://docs.openstack.org/developer/diskimage-builder/
+(1):
+
+

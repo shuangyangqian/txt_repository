@@ -1,0 +1,46 @@
+http://blog.csdn.net/gzhouc/article/details/52202219
+
+OpencSwitch(虚拟交换机)
+
+创建一个桥(交换机)并且创建桥的时候回自动创建和桥的名字一样的一个端口，这个端口可以作为该桥的管理端口。
+
+
+#ovs-vsctl add-br brname
+
+为刚刚创建的交换机创建端口
+
+ovs-vsctl add-port brname port
+
+那么接下来你可能会问，通常的交换机不都是有一个管理接口，可以telnet到交换机上进行配置吧，那么在OVS中创建的虚拟交换机有木有这种呢，有的！上面既然创建交换机brname的时候产生了一个虚拟网口brname，那么，你给这个虚拟网卡配置了IP以后，就相当于给交换机的管理接口配置了IP，此时一个正常的虚拟交换机就搞定了。
+
+ip address add 192.168.1.1/24 dev brname
+
+
+几个重要的概念：
+Bridge:Bridge代表一个以太网交换机(Switch)，一个主机中可以创建一个或者多个Bridge设备。
+Port:端口与物理交换机的端口概念类似，每个Port都隶属于一个Bridge。
+Interface:连接到Port的网络接口设备。在通常情况下，Port和Interface是一对一的关系, 只有在配置 Port为bond模式后，Port和Interface是一对多的关系
+Controller: OpenFlow控制器。OVS可以同时接受一个或者多个OpenFlow控制器的管理。
+datapath: 在OVS中，datapath负责执行数据交换，也就是把从接收端口收到的数据包在流表中进行匹配，并执行匹配到的动作。
+Flow table:每个datapath都和一个“flow table”关联,当datapath 接收到数据之后，OVS会在flowtable 中查找可以匹配的flow，执行对应的操作, 例如转发数据到另外的端口。
+
+
+#添加网桥
+ovs-vsctl add-br br-int
+
+#列出网桥
+ovs-vsctl list-br
+
+#给网桥添加端口
+ovs-vsctl add-port br-int tap-xxx
+
+#列出挂载某网络接口的所有网桥
+ovs-vsctl port-to-br tap-xxx
+
+#查看全部信息
+ovs-vsctl show
+
+
+
+实际操作心得：
+使用ovs-vsctl add-br brname刚创建一个ovs网桥的时候会多出来一个port，port的名字就叫做brname

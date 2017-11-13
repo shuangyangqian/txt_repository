@@ -1,0 +1,106 @@
+1：准备好一个cpio.gz的ramdisk image
+root@docker:~/twice# ls
+coreos_production_pxe_image-oem-stable-liberty.cpio.gz  tmp_folder
+root@docker:~/twice# cd tmp_folder/
+root@docker:~/twice/tmp_folder# ls
+root@docker:~/twice/tmp_folder# zcat ../coreos_production_pxe_image-oem-stable-liberty.cpio.gz | cpio --extract --make-directories
+443532 blocks
+root@docker:~/twice/tmp_folder# ls
+etc  usr  usr.squashfs
+
+
+root@docker:~/tmp/etc# mkpasswd --method=SHA-512 --rounds=4096
+Password: 
+$6$rounds=4096$HrdCD1xwob2$xu0sbfCch9Ulkpg4Hzsk8ewiG6DeKSxJEGnaJqdAk1fwOCe8vbZ0IsgnjOAPspPbcfFkFgVv0n5XXIRjz/j5u/
+
+
+
+
+#find . | cpio --create --format='newc' |gzip -c -9 > ../coreos_production_pxe_image-oem-stable-liberty-bytest.cpio.gz
+
+
+root@docker:~/twice# cd tmp_folder/
+root@docker:~/twice/tmp_folder# ls
+etc  usr  usr.squashfs
+root@docker:~/twice/tmp_folder# find . | cpio --create --format='newc' |gzip -c -9 > ../coreos_production_pxe_image-oem-stable-liberty-123.cpio.gz
+446352 blocks
+root@docker:~/twice/tmp_folder# ls
+etc  usr  usr.squashfs
+root@docker:~/twice/tmp_folder# cd ..
+root@docker:~/twice# ls
+coreos_production_pxe_image-oem-stable-liberty-123.cpio.gz  coreos_production_pxe_image-oem-stable-liberty.cpio.gz  tmp_folder
+root@docker:~/twice# 
+
+
+本地有一个container.tar.gz文件，将这个文件导入dockerimage中并且运行容器：
+
+root@docker:~/replace# cat container.tar.gz | docker import - coreos
+sha256:624f00f86b2eb95afa7d7497f6bb3388837b61eb73d6bd2a95bc3219cd655974
+root@docker:~/replace# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+coreos              latest              624f00f86b2e        5 seconds ago       291.8 MB
+<none>              <none>              976a0b37e585        4 weeks ago         406.4 MB
+coreos/latest       latest              b72257f0b8c3        5 weeks ago         291.8 MB
+...
+
+
+root@docker:~/replace# docker run -t -i coreos /bin/bash
+root@880f30608787:/# ls
+
+进入容器之后对/etc/shadow进行修改：
+
+
+sed -i '1s/*/passwd/g' test   通过sed来对文件中特定字符进行替换
+
+
+修改root密码：
+
+root@880f30608787:/etc# passwd root
+Enter new UNIX password: 
+Retype new UNIX password: 
+passwd: password updated successf
+
+替换container.tar.gz文件，重新打包cpio镜像
+#find . | cpio --create --format='newc' |gzip -c -9 > ../coreos_production_pxe_image-oem-stable-liberty-123.cpio.gz
+
+
+#glance image-create --name=bm_deploy_initrd --file=coreos_production_pxe_image-oem-stable-liberty.cpio.gz --disk-format=ari --container-format=ari
+
+#ironic node-update ef680d95-3d65-4523-a7d8-0d945c85f9ae remove driver_info/deploy_ramdisk
+
+# cat /root/dockerforimages_runing/container.tar.gz | docker import - coreos
+
+slack网址
+https://easystack.slack.com/messages/C54LG0PGS/
+
+
+
+利用一个iso文件提取出initrd
+1：http://www.cnblogs.com/kumulinux/archive/2012/10/15/2808704.html
+2：https://thewireframecommunity.com/node/14
+3：http://blog.csdn.net/rheostat/article/details/7614451
+
+
++--------------------------+--------------------------------------+
+| Property                 | Value                                |
++--------------------------+--------------------------------------+
+| OS-EXT-IMG-SIZE:size     | 13267968                             |
+| created                  | 2017-07-24T02:58:10Z                 |
+| id                       | f6199239-ed11-4437-815c-a76ba750a876 |
+| metadata hypervisor_type | baremetal                            |
+| minDisk                  | 0                                    |
+| minRam                   | 0                                    |
+| name                     | sqian_ironic1                        |
+| progress                 | 100                                  |
+| status                   | ACTIVE                               |
+| updated                  | 2017-07-24T02:59:19Z                 |
++--------------------------+--------------------------------------+
+
+
+
+
+
+
+
+
+nova boot --flavor sqian_flavor1 --image 7497414f-671d-4c6c-835b-207ec57eaa5d --nic net-id=07c8d9fe-f5d1-400c-b440-134161b4ddce sqian_bm

@@ -1,0 +1,259 @@
+easystack针对ironic多租户对nova端进行的修改：
+1.nova/utils.py:
+	def get_system_metadata_from_image():
+		做的修改：
+			根据镜像的hypervisor_type是不是baremetal来给is_bm赋值
+			给system_meta添加新的字段
+				system_meta['is_baremetal'] = is_bm
+			返回的值是system_meta，可以使用instance.system_metadata来获取对应的值。
+
+2.nova/virt/ironic/driver.py：
+	添加了函数mac_of_mgmt：
+		def mac_of_mgmt(self, instance):
+			该函数主要是根据instance获得node，然后根据node获得port list(#ironic port-list)
+			注：根据在配置ironic的时候，添加port的时候需要填写is_bm_mgmt为True
+			所以根据这个字段的值是否为True,返回对应的port.address
+			if port_detail.extra.get("is_bm_mgmt", 'False').upper() == 'TRUE':
+                return port.address
+
+	# ironic port-list
+	+--------------------------------------+-------------------+
+	| UUID                                 | Address           |
+	+--------------------------------------+-------------------+
+	| c3934287-5dc9-4bc9-b229-aece85dae308 | a0:36:9f:89:fa:a8 |
+	+--------------------------------------+-------------------+
+
+3:nova/virt/ironic/driver.py：
+	对函数_plug_vifs进行了修改：
+		def _plug_vifs(self, node, instance, network_info, context=None):
+			根据instance.system_metadata的一些属性值对patch进行定制
+		#network_info是一个列表，在nova/api/openstack/compute/servers.py的时候加上了bm_mgmt
+		#将列表转化为字符串
+		network_info_str = str(network_info)
+        LOG.debug("plug: instance_uuid=%(uuid)s vif=%(network_info)s",
+                  {'uuid': instance.uuid,
+                   'network_info': network_info_str})
+        # start by ensuring the ports are clear
+        self._unplug_vifs(node, instance, network_info)
+        #获取该node下的所有port
+        ports = self.ironicclient.call("node.list_ports", node.uuid)
+        #获取netwok_info的长度
+        len_net_info = ((len(network_info) - 1) if CONF.enabled_multi_tenant
+                        else len(network_info))
+        #network_info和ports长度不匹配，抛出异常
+        if len_net_info > len(ports):
+            raise exception.VirtualInterfacePlugException(_(
+                "Ironic node: %(id)s virtual to physical interface count"
+                "  missmatch"
+                " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")
+                % {'id': node.uuid,
+                   'vif_count': len(network_info),
+                   'pif_count': len(ports)})
+
+
+        inst_meta = instance.system_metadata
+        port_client = neutron_api.get_client(context, admin=True)
+        if len(network_info) > 0:
+            # not needed if no vif are defined
+            for vif in network_info:
+                for pif in ports:
+                    if vif['address'] == pif.address:
+                        # attach what neutron needs directly to the port
+                        port_id = six.text_type(vif['id'])
+                        if CONF.enabled_multi_tenant:
+                            tenant_segment_id = None
+                            patch = [{'op': 'add',
+                                      'path': '/extra/tenant_vif_port_id',
+                                      'value': port_id}]
+                            if (pif.address == inst_meta.get('bm_mgmt_mac', None)
+                                and inst_meta.get('bm_mgmt_uuid', None) == vif['network']['id']):
+                                # bm_mgmt is flat network whether use tenant
+                                patch = [{'op': 'add',
+                                          'path': '/extra/vif_port_id',
+                                          'value': port_id}]
+                            else:
+                                # tenant network
+                                net_id = vif['network']['id']
+                                net = port_client.show_network(net_id)
+                                tenant_segment_id = net[
+                                    'network']['provider:segmentation_id']
+                            if tenant_segment_id:
+                                patch.append({'op': 'add',
+                                              'path':
+                                                  '/extra/tenant_segment_id',
+                                              'value': tenant_segment_id})
+                        else:
+                            patch = [{'op': 'add',
+                                      'path': '/extra/vif_port_id',
+                                      'value': port_id}]
+
+                        self.ironicclient.call("port.update", pif.uuid, patch)
+                        break
+
+
+
+			最终使用ironicclient对port进行update
+			self.ironicclient.call("port.update", pif.uuid, patch)
+
+4.nova/api/openstack/compute/servers.py:
+	def create(self, req, body):
+		定义了变量is_baremetal,根据image_detail的properties来判断对is_baremetal赋值
+		is_baremetal = False
+        try:
+            glance_service_ref = glance.GlanceImageService()
+            image_detail = glance_service_ref.show(context, image_uuid)
+            if image_detail and image_detail.get('properties', None):
+                is_baremetal = image_detail['properties'].get(
+                                'hypervisor_type', '').upper() == 'BAREMETAL'
+        except Exception:
+            msg = _("Error while checking the image for ironic code path.")
+            LOG.warning(msg)
+
+        根据上述is_baremetal的值来判断配置文件中是否有对应的网络,否则抛出异常
+        if is_baremetal:
+            if not CONF.bm_mgmt_uuid:
+                msg = _("Baremetal management network is not configed.")
+                raise exc.HTTPBadRequest(explanation=msg)
+            requested_networks.append({'uuid': CONF.bm_mgmt_uuid})
+
+5.nova/compute/manager.py：
+	def _build_networks_for_instance(self, context, instance,
+            requested_networks, security_groups):
+        根据instance.system_metadata["is_baremetal"]的值来对instance.system_metadata的其他一些属性进行赋值
+        try:
+            if instance.system_metadata.get('is_baremetal', None):
+            	#根据instance获得node的mac地址
+                mgmt_mac = self.driver.mac_of_mgmt(instance)
+                instance.system_metadata['bm_mgmt_mac'] = mgmt_mac
+                #CONF.bm_mgmt_uuid是在配置文件中配置的部署裸机的网络
+                instance.system_metadata['bm_mgmt_uuid'] = CONF.bm_mgmt_uuid
+                instance.save()
+        except Exception:
+            pass
+
+6.nova/network/neutronv2/api.py：
+	def allocate_for_instance(self, context, instance, **kwargs):
+		如果instance.system_metadata["is_baremetal"]不为None
+			instance.system_metadata["bm_mgmt_uuid"]不为None
+			且instance.system_metadata["bm_mgmt_uuid"]等于request.network_id
+
+		#调用_create_port的时候将ironic定义的node的port的address(mac address)给传进去，代替原先的macs
+		inst_meta = instance.system_metadata
+        if inst_meta.get('is_baremetal', False) and inst_meta.get(
+                         'bm_mgmt_uuid', None) and inst_meta.get(
+                         'bm_mgmt_uuid', None) == request.network_id:
+        bm_mgmt_mac = set([inst_meta.get('bm_mgmt_mac', None)])
+        created_port = self._create_port(
+                port_client, instance, request.network_id,
+                port_req_body, request.address,
+                security_group_ids, bm_mgmt_mac, dhcp_opts)
+        else:
+        	created_port = self._create_port(
+                port_client, instance, request.network_id,
+                port_req_body, request.address,
+                security_group_ids, available_macs, dhcp_opts)
+        created_port_ids.append(created_port)
+
+
+
+
+easystack针对ironic多租户对ironic端进行的修改：
+1.增加配置文件etc/switch_info.conf
+2.增加ironic/driver/modules/netman_utils.py文件
+上述两个文件配合可以登陆交换机，修改交换机的信息，比如vlan等。
+
+3.ironic/conductor/task_manager.py文件：
+
+class TaskManager(object):
+    def __init__(self, context, node_id, shared=False, driver_name=None,
+                 purpose='unspecified action'):
+        self._spawn_method = None
+        self._on_error_method = None
+
+        self.context = context
+        self.node = None
+        self.node_id = node_id
+        self.shared = shared
+
+        self.fsm = states.machine.copy()
+        self._purpose = purpose
+        self._debug_timer = timeutils.StopWatch()
+
+        #增加self.ports_detail字段
+        self.ports_detail = {}
+
+        try:
+            LOG.debug("Attempting to get %(type)s lock on node %(node)s (for "
+                      "%(purpose)s)",
+                      {'type': 'shared' if shared else 'exclusive',
+                       'node': node_id, 'purpose': purpose})
+            if not self.shared:
+                self._lock()
+            else:
+                self._debug_timer.restart()
+                self.node = objects.Node.get(context, node_id)
+
+            self.ports = objects.Port.list_by_node_id(context, self.node.id)
+            self.portgroups = objects.Portgroup.list_by_node_id(context,
+                                                                self.node.id)
+            self.driver = driver_factory.build_driver_for_task(
+                self, driver_name=driver_name)
+
+            #ports_detail中存放的是该node列出来的所有port
+            for port in self.ports:
+                port_uuid = port.uuid
+                self.ports_detail[port_uuid] = objects.Port.get_by_uuid(
+                    context, port_uuid)
+
+            # NOTE(deva): this handles the Juno-era NOSTATE state
+            #             and should be deleted after Kilo is released
+            if self.node.provision_state is states.NOSTATE:
+                self.node.provision_state = states.AVAILABLE
+                self.node.save()
+
+            self.fsm.initialize(start_state=self.node.provision_state,
+                                target_state=self.node.target_provision_state)
+
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.release_resources()
+
+
+
+
+
+咱们对ironic多租户的修改，只是在deploy前修改了交换机信息，
+deploy完成后又修改了交换机信息。但是这两个地方呢，
+newton版本社区也是同样的进行修改，
+我觉得社区的和咱们的好像不能共存。你觉得呢
+
+
+
+
+
+
+
+
+nova/network/neutronv2/api.py:
+
+	def allocate_port_for_instance():
+		def allocate_for_instance():
+			def _create_ports_for_instance():
+			def _update_ports_for_instance():	
+
+
+macs:
+	allocate_for_instance()函数中调用了俩函数，一个是create_ports_for_instance，一个是_update_ports_for_instance。关于dhcp和macs的一些是在后者中进行处理的。
+
+	4.0升级到4.1版本之后，macs和dhcp的相关操作都是在_update_ports_for_instance中来进行的，所以在update之前对macs进行了操作，类似于4.0版本的操作。
+
+
+
+nova/compute/manager.py:
+
+attach_interface() --->allocate_port_for_instance() --->allocate_for_instance()
+
+
+
+M版本是_create_port
+现在是先_create_ports_for_instance,在_create_ports_for_instance里面再调用_create_port_minimal

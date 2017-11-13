@@ -1,0 +1,44 @@
+nova.virt.ironic.driver.py
+	def spawn():
+		...
+		try:
+			self._plug_vifs(node, instance, network_info)
+		...
+
+	---------------------------------
+	    def _plug_vifs(self, node, instance, network_info):
+        
+        1:输出日志
+        network_info_str = str(network_info)
+        LOG.debug("plug: instance_uuid=%(uuid)s vif=%(network_info)s",
+                  {'uuid': instance.uuid,
+                   'network_info': network_info_str})
+        2：确保port是干净的，所以首先要讲port上插得设备清楚干净
+        # start by ensuring the ports are clear
+        self._unplug_vifs(node, instance, network_info)
+
+        3：得到node对应的所有port列表
+        ports = self.ironicclient.call("node.list_ports", node.uuid)
+
+        4：确保port的长度和network_info的长度一致
+        if len(network_info) > len(ports):
+            raise exception.VirtualInterfacePlugException(_(
+                "Ironic node: %(id)s virtual to physical interface count"
+                "  mismatch"
+                " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")
+                % {'id': node.uuid,
+                   'vif_count': len(network_info),
+                   'pif_count': len(ports)})
+        
+        if len(network_info) > 0:
+            # not needed if no vif are defined
+            for vif in network_info:
+                for pif in ports:
+                    if vif['address'] == pif.address:
+                        # attach what neutron needs directly to the port
+                        port_id = six.text_type(vif['id'])
+                        patch = [{'op': 'add',
+                                  'path': '/extra/vif_port_id',
+                                  'value': port_id}]
+                        self.ironicclient.call("port.update", pif.uuid, patch)
+                        break

@@ -1,0 +1,33 @@
+断点加在nova/api/openstack/compute/servers.py的def create()函数中：
+
+self = <nova.api.openstack.compute.servers.ServersController object at 0x7538650>
+req = POST /v2/30b489cf132e4152bd05f8ec6bee384d/servers HTTP/1.0
+Accept: application/json
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Length: 408
+Content-Type: application/json
+Host: 172.16.10.2:8774
+User-Agent: python-novaclient
+X-Auth-Token: 2a06747f142d400e9ec19cdb4d075193
+X-Domain-Id: None
+X-Domain-Name: None
+X-Identity-Status: Confirmed
+X-Project-Domain-Id: default
+X-Project-Domain-Name: Default
+X-Project-Id: 30b489cf132e4152bd05f8ec6bee384d
+X-Project-Name: admin
+X-Role: admin
+X-Roles: admin
+X-Service-Catalog: [{"endpoints": [{"adminURL": "http://10.120.1.2:9292", "region": "RegionOne", "internalURL": "http://10.120.1.2:9292", "publicURL": "http://172.16.10.2:9292"}], "type": "image", "name": "glance"}, {"endpoints": [{"adminURL": "http://10.120.1.2:9696", "region": "RegionOne", "internalURL": "http://10.120.1.2:9696", "publicURL": "http://172.16.10.2:9696"}], "type": "network", "name": "neutron"}, {"endpoints": [{"adminURL": "http://10.120.1.2:7207", "region": "RegionOne", "internalURL": "http://10.120.1.2:7207", "publicURL": "http://172.16.10.2:7207"}], "type": "account", "name": "chakra"}, {"endpoints": [{"adminURL": "http://10.120.1.2:7206", "region": "RegionOne", "internalURL": "http://10.120.1.2:7206", "publicURL": "http://172.16.10.2:7206"}], "type": "billing", "name": "billing"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8776/v2/30b489cf132e4152bd05f8ec6bee384d", "region": "RegionOne", "internalURL": "http://10.120.1.2:8776/v2/30b489cf132e4152bd05f8ec6bee384d", "publicURL": "http://172.16.10.2:8776/v2/30b489cf132e4152bd05f8ec6bee384d"}], "type": "volumev2", "name": "cinderv2"}, {"endpoints": [{"adminURL": "http://10.120.1.2:35357/v2.0", "region": "RegionOne", "internalURL": "http://10.120.1.2:5000/v2.0", "publicURL": "http://172.16.10.2:5000/v2.0"}], "type": "identity", "name": "keystone"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8774/v2/30b489cf132e4152bd05f8ec6bee384d", "region": "RegionOne", "internalURL": "http://10.120.1.2:8774/v2/30b489cf132e4152bd05f8ec6bee384d", "publicURL": "http://172.16.10.2:8774/v2/30b489cf132e4152bd05f8ec6bee384d"}], "type": "compute", "name": "nova"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8000/v1", "region": "RegionOne", "internalURL": "http://10.120.1.2:8000/v1", "publicURL": "http://172.16.10.2:8000/v1"}], "type": "cloudformation", "name": "heat-cfn"}, {"endpoints": [{"adminURL": "http://10.120.1.2:6385", "region": "RegionOne", "internalURL": "http://10.120.1.2:6385", "publicURL": "http://172.16.10.2:6385"}], "type": "baremetal", "name": "ironic"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8777", "region": "RegionOne", "internalURL": "http://10.120.1.2:8777", "publicURL": "http://172.16.10.2:8777"}], "type": "metering", "name": "ceilometer"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8004/v1/30b489cf132e4152bd05f8ec6bee384d", "region": "RegionOne", "internalURL": "http://10.120.1.2:8004/v1/30b489cf132e4152bd05f8ec6bee384d", "publicURL": "http://172.16.10.2:8004/v1/30b489cf132e4152bd05f8ec6bee384d"}], "type": "orchestration", "name": "heat"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8773/services/Admin", "region": "RegionOne", "internalURL": "http://10.120.1.2:8773/services/Cloud", "publicURL": "http://172.16.10.2:8773/services/Cloud"}], "type": "ec2", "name": "nova_ec2"}, {"endpoints": [{"adminURL": "http://10.120.1.2:8776/v1/30b489cf132e4152bd05f8ec6bee384d", "region": "RegionOne", "internalURL": "http://10.120.1.2:8776/v1/30b489cf132e4152bd05f8ec6bee384d", "publicURL": "http://172.16.10.2:8776/v1/30b489cf132e4152bd05f8ec6bee384d"}], "type": "volume", "name": "cinder"}]
+X-Tenant: admin
+X-Tenant-Id: 30b489cf132e4152bd05f8ec6bee384d
+X-Tenant-Name: admin
+X-User: admin
+X-User-Domain-Id: default
+X-User-Domain-Name: Default
+X-User-Id: 58554a7814114d9f92ad70c83acdb536
+X-User-Name: admin
+
+{"server": {"name": "test-init", "imageRef": "49a31618-853b-4675-bad7-295afaa9cd96", "flavorRef": "1", "user_data": "IyEvYmluL2Jhc2gKZWNobyAib25lIHRlc3QgYWJvdXQgdXNlciBkYXRhIiA+PnVzZXJkYXRhCmNobW9kIDc3NyB1c2VyZGF0YQp1c2VyYWRkIC1tIG1lCmVjaG8gLWUgJ21lXHRBTEw9KEFMTClcdE5PUEFTU1dEOiBBTEwnID4+IC9ldGMvc3Vkb2Vycwo=", "max_count": 1, "min_count": 1, "networks": [{"uuid": "85ef473a-db59-4108-9f67-690cd5336fc3"}]}}
+body = {u'server': {u'name': u'test-init', u'imageRef': u'49a31618-853b-4675-bad7-295afaa9cd96', u'flavorRef': u'1', u'user_data': u'IyEvYmluL2Jhc2gKZWNobyAib25lIHRlc3QgYWJvdXQgdXNlciBkYXRhIiA+PnVzZXJkYXRhCmNobW9kIDc3NyB1c2VyZGF0YQp1c2VyYWRkIC1tIG1lCmVjaG8gLWUgJ21lXHRBTEw9KEFMTClcdE5PUEFTU1dEOiBBTEwnID4+IC9ldGMvc3Vkb2Vycwo=', u'max_count': 1, u'min_count': 1, u'networks': [{u'uuid': u'85ef473a-db59-4108-9f67-690cd5336fc3'}]}}

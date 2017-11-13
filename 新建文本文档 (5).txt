@@ -1,0 +1,41 @@
+nova ironic vmware
+
+1:hostha vmha xxx vmware纳管 跨region迁移  
+
+ironic：多租户、支持哪些交换机（总结）、
+
+hostha vmha  
+
+（检查后报警，认为干预）
+
+cpuxxx tapaleigei   
+
+纳管
+
+1：
+
+2：虚拟备份
+
+3：
+
+虚拟回收站（）
+
+softdelete
+
+
+
+1：vmware纳管+++++++已完成80/90%  
+
+
+vnccontrol migrate 
+
+
+2：热迁移：
+
+
+3：arm
+
+attach-volume
+
+
+nova cinder glance 

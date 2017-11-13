@@ -1,0 +1,30 @@
+1:在70环境中部署裸机失败。
+nova-scheduler中报错如下：
+2017-07-27 11:43:00.783 1786456 INFO nova.scheduler.filters.retry_filter [req-dd3a5290-125e-4d9f-824e-b3adeea8bc64 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Host [u'ironic.compute.domain.tld', u'0a9c20b5-5bca-4065-87cd-83573b1e1234'] fails.  Previously tried hosts: [[u'ironic.compute.domain.tld', u'0a9c20b5-5bca-4065-87cd-83573b1e1234']]
+2017-07-27 11:43:00.785 1786456 INFO nova.filters [req-dd3a5290-125e-4d9f-824e-b3adeea8bc64 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Filter ImagePropertiesFilter returned 0 hosts
+2017-07-27 11:43:00.786 1786456 INFO nova.filters [req-dd3a5290-125e-4d9f-824e-b3adeea8bc64 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Filtering removed all hosts for the request with instance ID '5d6ab97d-6eeb-40a5-bc4d-c9d4ac83ffa0'. Filter results: ['RetryFilter: (start: 6, end: 5)', 'AvailabilityZoneFilter: (start: 5, end: 5)', 'RamFilter: (start: 5, end: 5)', 'CoreFilter: (start: 5, end: 5)', 'DiskFilter: (start: 5, end: 5)', 'ComputeFilter: (start: 5, end: 5)', 'ComputeCapabilitiesFilter: (start: 5, end: 5)', 'ImagePropertiesFilter: (start: 5, end: 0)']
+
+nova-compute中报错如下：
+2017-07-26 19:26:53.580 909800 WARNING nova.network.neutronv2.api [req-dea0738f-cf21-446e-838c-756740a8d3e0 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] [instance: bbc96af3-0338-4f66-a870-7e7c4d61c579] Neutron error: MAC address a0:36:9f:89:fa:4c is already in use on network a92eb238-696b-437d-b0fb-c45cfdb5ea3a.
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager [req-dea0738f-cf21-446e-838c-756740a8d3e0 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Instance failed network setup after 1 attempt(s)
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager Traceback (most recent call last):
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/nova/compute/manager.py", line 1575, in _allocate_network_async
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/nova/network/neutronv2/api.py", line 695, in allocate_for_instance
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/oslo_utils/excutils.py", line 220, in __exit__
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager     self.force_reraise()
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/oslo_utils/excutils.py", line 196, in force_reraise
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager     six.reraise(self.type_, self.value, self.tb)
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/nova/network/neutronv2/api.py", line 679, in allocate_for_instance
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager   File "/usr/lib/python2.7/site-packages/nova/network/neutronv2/api.py", line 293, in _create_port
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager PortInUse: Port a0:36:9f:89:fa:4c is still in use.
+2017-07-26 19:26:54.085 909800 ERROR nova.compute.manager
+2017-07-26 19:26:54.625 909800 ERROR nova.virt.ironic.driver [req-dea0738f-cf21-446e-838c-756740a8d3e0 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] Error preparing deploy for instance bbc96af3-0338-4f66-a870-7e7c4d61c579 on baremetal node 0a9c20b5-5bca-4065-87cd-83573b1e1234.
+2017-07-26 19:26:54.626 909800 ERROR nova.compute.manager [req-dea0738f-cf21-446e-838c-756740a8d3e0 dfba678bbb7b42d599006a174ec14cb1 cddbdc01abe84a4489a33029c906113b - - -] [instance: bbc96af3-0338-4f66-a870-7e7c4d61c579] Instance failed to spawn
+
+这是因为物理节点的mac地址端口被用了，当neutron port-list的时候会看到对应的mac地址绑定了有端口，使用neutron port-delete删除这些端口即可。
+
+
+
+
+linux下关闭tftp服务：
+#systemctl stop xinetd

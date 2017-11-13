@@ -1,0 +1,333 @@
+newton版本nova里和产品关系比较大的几个BP：
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/get-me-a-network.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/support-perf-event.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/tag-instances.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/virt-device-role-tagging.html
+
+
+
+1.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/add-buildrequest-obj.html
+在cellsv2中，request信息进来的时候不知道存储在那个instance table中。
+提议的改变：添加了RequestSpec object，为instance存储一些额外的信息。
+			在nova-apidatabase中添加一张新表，存储那些在RequestSpec中没有的filed信息。
+
+2.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/api-no-more-extensions.html
+
+3.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/async-live-migration-rest-check.html
+目前的live-migration操作是先检查环境是不是符合需求，然后再接受迁移操作和触发迁移动作。检查操作和REST APIresponse是同步的。
+提议的改变：改成异步的。接收到迁移请求之后，直接返回状态吗202，然后进行检查操作。
+
+4.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/auto-live-migration-completion.html
+迁移操作出发之后，操作员需要针对迁移过程进行监控，伸直采取一些操作来帮助迁移动作完成。这对于云管理员来说工作量太大。
+可选择的策略有：
+	Maximum Downtime Setting
+	Auto-converge
+	Post-Copy
+	Live Migration Strategy
+提议的改变：根据迁移动作对操作人员的重要程度来选择策略自动完成迁移。
+
+5.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-aggregate-api-db.html
+cell是openstack一个非常重要的概念，主要用来解决openstack的扩展性和规模瓶颈。众所周知，openstack是由很多的组件通过松耦合构成，那么当达到一定的规模后，某些模块必然成为整个系统的瓶颈。比较典型的组件就是database和AMQP了，所以，每个cell有自己独立的DB和AMQP。
+aggregate是管理员用来根据硬件资源的某一属性来对硬件进行划分的功能，只对管理员可见，主要用来给nova-scheduler通过某一属性来进行instance的调度。其主要功能就是实现根据某一属性来划分物理机，比如按照地理位置，使用固态硬盘的机器，内存超过32G的机器，根据这些指标来构成一个host group。
+
+被提议的改变：将aggregate信息从cell的数据库中迁移到nova-api数据库中
+
+6.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-cell0.html、
+当部instance的时候，部署成功之后instance的信息会被存储到cell database中的instance table中，但是当scheduler没有将instance调度到任何一个cell的时候，需要将instance的数据存储到一个cell中。
+被提议的改变：添加cellZero
+
+7.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-instance-groups-api-db.html
+被提议的改变：将instance的group信息从cell数据库中迁移到nova-api数据库中。
+
+8.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-keypairs-api-db.html
+被提议的改变：将Keypair database信息从nova数据库中迁移到nova-api数据库中。
+
+9.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/cells-mq-connection-switching.html
+nova api向cell发送RPC msg的时候，必须要使用到目标cell的消息队列链接信息。nova api必须要将消息队列信息传导RPC api层。
+被提议的改变：
+
+10.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/check-destination-on-migrations-newton.html
+在进行迁移的时候，现存的策略是可以指定destination host，也可以不指定。当制定了destination host的时候就会直接迁移，跳过scheduler这个步骤。实现了当指定destination host的时候也对destination host进行检查。
+
+11.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html
+
+12.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/deprecate-api-proxies.html
+丢弃一些api代理：
+/images
+/os-baremetal-nodes
+/os-volumes
+/os-snapshots
+/os-fixed-ips
+/os-floating-ips
+/os-floating-ip-dns
+/os-floating-ip-pools
+/os-floating-ips-bulk
+/os-fping - (this only really works with nova-net)
+/os-networks
+/os-security-group-default-rules
+/os-security-group-rules
+/os-security-groups
+/os-tenant-networks
+
+13.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/discoverable-policy-cli.html
+添加了CLI，支持用户列出policy list
+As an user, I want to know what policies I am passing, so I can know what actions are available to me.
+As an user, I want to know what policies I am passing for a certain target ( e.g.: instance), so I can know what actions I can take.
+
+15.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/fix-console-auth-tokens.html
+目前的ConsoleAuthTokens API 只允许通过RDP协议的token链接console。实现了支持多种不同的协议token（ MKS tokens等）
+
+16.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/flavor-cell-api.html
+将flavor table的信息添加到nova apidatabase中。
+
+17.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/generic-resource-pools.html
+由于历史原因nova在对资源进行计算的时候，把instance使用的资源都认为是内部compute node提供的资源，但是目前还存在许多外部资源池，如ceph存储，NFS等等，这就导致在计算资源使用数量的时候出现数据错误。新建外部资源池的REST API对外部资源进行添加和删除，以及使用数量的查询。
+
+18.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/get-me-a-network.html
+
+M版本中neutron新加了一个API：auto-allocated-topology。当创建instance的时候在request中没有指定对应的network或者说project中没有可以使用的network，nova倾向于使用这一个API接口自动的为该project添加网络。这也在创建instance的work flow的过程中增加了一些新的feature变化，特别是在neutron和nova-network的vlanManager之间。当然也有部署实施者针对不同的情况进行设置，但是在那之后网络服务又会自动地对project的网络拓扑进行设置。
+
+问题描述：对于nova-network，用户在创建instance的时候常常没有指定对应的网络。在neutron中，一个项目需要对一个网络或者子网有权限，才能对nova的instance进行网络设置。
+改变主要是为了降低用户的使用复杂度，用户不需要在创建instance的时候指定networks/subnet/route，然后再boot的时候指定一个nic网络。
+
+使用情况：作为一个最终用户，我想在创建instance的时候，自动的给我添加网络，以至于我可以在instance
+active的时候第一时间ssh进去vm。
+
+目前使用neutron创建server instance的时候出现的情况：
+Currently a user can create an instance and specify the following networking values with Neutron as the network API in Nova:
+	Request a specific fixed IP.
+	Request a specific port (or ports).
+	Request a specific network (or duplicate networks as of Juno [2]).
+	Request a specific fixed IP and network (Nova will create a port in that network and use the fixed IP address).
+	Not providing anything on the create request.
+You cannot request a fixed IP and a port together because the port already has a fixed IP associated with it. When requesting a specific port, the network that the port is in is implied in the create request.
+
+In the last case (nothing is requested), Nova will attempt to lookup an available network to use by searching for:
+A private network for the project.
+A public (shared=True) network.
+If this search results in more than one network, then it results in an ambiguous network error.
+
+There is also existing behavior in Nova where you can create an instance with no networking when the user does not provide a specific network to use and the project does not have access to a network in Neutron. This is not an error since you can later attach a network with the os-attach-interfaces API.
+
+如何使用auto-allocation的时候创建server的request
+The networks object in the create server request will now be either a list or an enum with the following values:
+
+auto:
+This means auto-allocate the network for me if one is not available to the project. For nova-network this is the default and existing behavior with the VlanManager. For Neutron this means using the auto-allocated-topology API.
+The ‘auto’ value cannot be used when specifying a port uuid because a port implies a network that the project would already have access to.
+none:
+This means do not even attempt to setup networking. The compute manager will avoid network API calls when creating the server instance. Any networking needed for the instance will have to be attached later.
+
+Internally the ‘auto’ or ‘none’ value will be stored in the nova.objects.network_request.NetworkRequest.network_id field.
+
+19.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/hyperv-fibre-channel.html
+目前Hyper-V只支持添加iscsi和smb的卷，添加支持Fibre channel
+（被丢弃了）
+
+20.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/ironic-multiple-compute-hosts.html
+添加itonic支持多个nova-compute service
+
+21.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/keypairs-pagination.html
+目前用户只能得到所有没有被删除的key-pairs，速度很慢，
+被提议的修改：添加microversion API，支持用户得到部分key pairs或者通过GET /os-keypairs request中的参数来进行分组显示。
+更新数据库操作方法来支持分页和排序操作。
+添加maker limit字段来帮助函数内部操作。
+
+22.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/libvirt-instance-storage.html
+
+23.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/libvirt-vzstorage-volume-support.html
+Virtuozzo Storage是Virtuozzo 平台解决方案重要组成部分，也是目前唯一能与容器（container）和虚拟监视器（hypervisor）结合并且能在二者之间迁移的解决方案。现在，我们就来探究革新虚拟云存储技术的Virtuozzo Storage究竟有什么特别之处。
+
+改BP主要是支持添加和使用在Virtuozzo Storage是Virtuozzo storage的卷。
+添加新的驱动来支持该类型的卷，工作流程和NFS和SMBFS类似。
+
+24.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/modern-microversions.html
+更新microversion的header信息。
+
+25.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/neutron-routed-networks.html
+
+26.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/neutron-routed-networks.html
+将nova-api返回的hypervisor.cpu_info信息从string类型改成json类型
+
+27.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/os-vif-library.html
+定义一个标准库，os-vif，和os-brick类似，提供用来vif port绑定所需的从neutron向nova传输的版本化的对象数据，并且提供API接口来使得第三方通过nova自定义plug和unplug动作。
+
+28.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/pagination-for-hypervisor.html
+当前存在的问题，当存在computenode数量众多的时候，列出所有的hypervisor list会很慢，对于用户来说在horizon中的同一个table中列出数千条items也很不友好。
+
+被提议的更改：更改数据库方法，支持查询hypervisor的时候带filter，
+
+compute_node_get_all的代码会被重构
+增加REST API来支持分页显示的request。
+
+29.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/policy-in-code.html、
+将策略信息都写到代码中，在nova/policy中，etc/policy.json变为空。
+
+30.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/prep-for-network-aware-scheduling.html
+网络感知调度的一些准备工作。由于管理员的操作或者其他一些原因，一个host上的一些subnet的使用会受到限制。因此，在调度之前需要知道所有request的port信息和resources信息，调度之后还需要检查这些资源是否可用。
+
+具体的变化是将之前的allocate_for_instance变为两部分get/create ports和bind port。
+
+31.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/refresh-quotas-usage.html
+增加刷新配额的功能。
+有些配额使用数据会不同步（具体原因不确定，重现困难），导致不允许部署虚机，增加刷新功能。
+
+32.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers.html
+增加一个基本数据模型：Resource Providers。
+使得nova支持其他形式的资源提供形式，比如一些共享资源池或者外部资源提供服务。
+
+33.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers-allocations.html
+增加一个基本数据模型：Resource Providers。
+
+34.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/response-for-invalid-status.html
+之前一个bug是说，当请求server list的时候，传入一个invalid 状态的时候，对于普通用户会返回空列表，但是对于管理员会抛出异常并返回http 500.这个bug已经被修复，但是仅仅返回空列表不行，要返回http 400状态吗。
+
+当传进来一个server list的请求，检查请求的server的status是否有效，否则，返回400.
+
+35http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/sriov-pf-passthrough-neutron-port.html
+SR-IOV 技术是一种基于硬件的虚拟化解决方案，可提高性能和可伸缩性。SR-IOV 标准允许在虚拟机之间高效共享 PCIe（Peripheral Component Interconnect Express，快速外设组件互连）设备，并且它是在硬件中实现的，可以获得能够与本机性能媲美的 I/O 性能。SR-IOV 规范定义了新的标准，根据该标准，创建的新设备可允许将虚拟机直接连接到 I/O 设备
+
+之前有一个BP是实现了nova支持SR-IOV机器的物理特性。该BP主要是支持SRIOV机器可以关联neutron port。
+
+36.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/support-neutron-security-group.html
+实现了支持xenServer的neutron安全组。neutron的安全组主要是依赖于iptables实现的，将iptables规则应用到每个物理网卡的linux bridge上。xen在创建虚拟机的时候没有使用linux bridge，因此无法实现neutron安全组。
+
+37.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/support-perf-event.html
+该BP主要是为nova增加一个新的功能--perf
+event：收集instance的统计信息，如cpu使用率。这些数据会被ceilometer收集。
+
+Perf event是linux下的一个框架，主要是提供在硬件和软件层面上分析性能事件。通过一系列可计量的事件我们可以估算来自不同资源的事件，比如文本切换、缓存未命中总数，并且可以统计每个instance的统计数据。
+
+libvirt从1.3.3就已支持Perf，目前已经支持得到cpu 缓存，并且将会有更多的事件添加进来。我们在nova中也添加该功能。
+
+问题描述：云管理员希望知道instance占用了哪些资源，如cpu memory cpu缓存 带宽等等，并且希望知道这些资源使用数量，这些数据要被ceilometer，云管理员监控这些数据，知道哪些数据对于哪些instance是比较重要的，可以对该instance进行迁移或者提供更好的资源来满足SLA。
+
+建议的改变：
+添加configure option：enabled_perf_events，是一个列表，列表中指明了event类型，默认值是[]。
+在生成instance的XML文件的时候添加参数来支持enabled_perf_events。仅仅支持合适的libvirt版本，对于太旧的版本不支持。
+<perf>
+	<event enable='yes' name='cmt'>
+</perf>
+
+只有添加了这个参数，libvirt才支持Perf event，但是轮询（polling）并不会开始，知道我们调用libvirt的API。
+
+该spec中nova不会自己去轮询static，但是ceilometer会对该configuration收益。
+
+38.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/tag-instances.html
+该BP主要是为了支持在Nova domain model中为instance对象添加simple string tagging。
+
+问题描述：在很多REST API中支持对domain model的object添加tag（一个或者多个string），这些string可以用来对队形进行分组或者分类。
+
+为了和大多数API一致，我们添加了microversion，支持普通用户添加、删除、列出一个instance的tags。
+
+提议的改变：
+增加一个新的API，支持用户为他们的instances添加tag，用simple string。
+增加一个microversion API，允许用户添加、删除、列出instance的tag。
+增加一个microversion API，允许根据一个或者多个string tag来查询instance。
+
+39.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/use-castellan-key-manager.html
+将Castellan集成进来，为了实现Key Management
+
+之前Castellan是利用nova和cinder里面的代码来实现key manager，将nova和cinder里面的代码移除，通过Casterllan来实现key manager。
+key-manager的code 
+interface从原来的nova、cinder中删除，单独的创建一个库。并且单独的使用Castellan来对key-manager interface进行管理。
+
+40.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/use-glance-v2-api.html
+实现了支持glance v2 API，放弃使用glance v1 API。
+
+41.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/user-id-based-policy-enforcement.html
+
+42.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/vendordata-reboot.html
+
+43.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/vendordata-reboot.html
+
+44.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/virt-device-role-tagging.html
+提供了一个策略，支持用户使用特定的角色在给guest添加device的时候添加tag。这个tag是和device的hardware address是对应的，并且之一对应关系是通过metadata service或者cloud-init暴露给guest OS。
+
+问题描述：创建多网卡和多磁盘的instance是非常正常的，tenant用户在创建instance的时候对于每一个devices设备都会有一个特定的角色。比如：一个特定的disk是用来Oracle数据库存储或者是用来Squid的webcache存储的。类似的也有可能存在一个network interfaces是被跑在instance中的一个网络服务应用占用的。
+
+创建instance的租户用户没有一个明确的办法和每一个跑在guest os中的使用device的应用通信。
+
+可能出现的方法就是租户用户使用知道的方法来识别一个device，然后通过cloud-init和metadata传给guest os。比如说，一个MACaddress可以用来识别nics，disk 的name可以来识别disks，user可能会传入一个metadata tag：
+# nova boot \
+    --image mywebappimage \
+    --flavor m1.large \
+    --meta oracledata=vda \
+    --meta apachefrontend=02:10:22:32:33:22 \
+    mywebapp
+
+因为nova尽可能多的隐藏guest的hardware setup信息，所以tenant user很难知道每个device的唯一标识符。比如使用模拟NICS，在boot之前很容易知道mac地址，但是使用PCI来分配设备的时候，就得不到了。
+
+使用场景：租户用户希望像instance提供信息来识别哪个device来让一个希望的guest application role来使用。
+比如说，用户希望使用scsi存出来为oracle database来提供存储，因为他们为这个磁盘设置了cinder volume，具有很高的吞吐量。
+
+租户用户需要想guest os提供这些device的识别信息，不需要知道具体的hypervisor对这些虚拟硬件是如何配置的。
+
+提议的改变：提议的改变是拓展REST API，当在添加disk或者network interfaces的时候可以添加一个opaque（不透明的）的string “tag”。
+
+当boot instance的时候，nova需要确定和用户请求的device信息一致的PCI, USB, SCSI address，然后创建一个metadata file来存储用户添加的tag和hypervisor分配device address的映射关系。
+
+这个metadata file会通过metadata service或者cloud-init服务传输。
+
+当guest os启动起来的时候，读取metadata file来确定那个devices需要被哪个确定的appilication来使用。guest os如何做这些在此BP之外。nova只是定义一个file，并且包含了一系列信息，guest os和其中的application如何使用该文件，随他们便。目前这块还没有什么标准，对于设计file format来说是个空白区域。
+
+比如说，用户创建了一个instance，使用了若干个devices，如下：
+nova boot \
+    --image mywebappimage \
+    --flavor m1.large \
+    --nic net-id=12345,tag=nfvfunc1 \
+    --nic net-id=56789,tag=nfvfunc2 \
+    --block-device volume_id=12345,bus=scsi,tag=oracledb \
+    --block-device volume_id=56789,bus=virtio,tag=squidcache \
+    mynfvapp
+
+nova会根据上述信息自动创建metadata file：
+{
+  "devices": [
+    {
+      "type": "nic",
+      "bus": "pci",
+      "address": "0000:00:02.0",
+      "mac": "01:22:22:42:22:21",
+      "tags": ["nfvfunc1"]
+    },
+    {
+      "type": "nic",
+      "bus": "pci",
+      "address": "0000:00:03.0",
+      "mac": "01:22:22:42:22:21",
+      "tags": ["nfvfunc2"]
+    },
+    {
+      "type": "disk",
+      "bus": "scsi",
+      "address": "1:0:2:0",
+      "serial": "disk-vol-2352423",
+      "tags": ["oracledb"]
+    },
+    {
+      "type": "disk",
+      "bus": "pci",
+      "address": "0000:00:07.0",
+      "serial": "disk-vol-24235252",
+      "tags": ["squidcache"]
+    }
+  ]
+}
+
+这个例子中提供了关于devices的一些信息：
+1.type of device
+2.the bus the device is attached to
+3.the device address
+4.the network device mac address if type=nic
+5.the disk drive serial string if type=disk
+6.the network device name
+7.the diskj device name
+8.允许同一个tag在不同的device上出现多次
+9.
+10.尽管语法支持同一个device添加多个tag，nitially the impl will only allow a single tag
+
+45.http://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/xenapi-independent-nova.html
+
+
+

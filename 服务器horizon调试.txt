@@ -1,0 +1,27 @@
+## 调试服务器horizon代码步骤
+-- horizon代码位置: /usr/share/openstack_dashboard
+
+1. 停掉httpd服务（system httpd stop/systemctl stop httpd.service）
+
+2. 备份static文件夹
+
+3. 配置local_settings.py文件（vim easystack_dashboard/local/local_settings.py）
+- 将WEBROOT修改为'/'
+- 将DEBUG打开DEBUG=True
+
+4. cd到openstack_dashboard目录，执行python manage.py collectstatic --noinput
+ - 该命令是将项目中的static文件收集到openstack_dashboard/static下，一般情况下这步可以省略
+
+5. 执行python manage.py compress --force
+ - 该命令用于编译css/js文件
+
+6. 启动Django服务器（python manage.py runserver 0.0.0.0:8000）
+ - 用0.0.0.0来监听所有客户端的请求
+
+## 调试完恢复horizon环境
+1. 停掉Django服务器
+2. 将local_settings.py中WEBROOT的值恢复（默认恢复成'/dashboard/'）,将DEBUG信息关闭（DEBUG=False）
+3. 重启httpd服务
+4. 浏览器请求如果页面显示有问题，尝试在openstack_dashboard目录下执行python manage.py compress
+
+
